@@ -1,8 +1,28 @@
 import logging
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+
+def _segment_output_pattern(output_dir: Path) -> str:
+    """Ensure today's folder exists in Python, then let FFmpeg write segments there."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    now = datetime.now(timezone.utc)
+    day_dir = output_dir / now.strftime("%Y") / now.strftime("%m") / now.strftime("%d")
+    day_dir.mkdir(parents=True, exist_ok=True)
+    return str(output_dir / "%Y" / "%m" / "%d" / "%H-%M-%S.mp4")
+
+
+def _read_stderr_tail(proc: subprocess.Popen, max_chars: int = 2000) -> str:
+    if proc.stderr is None:
+        return ""
+    try:
+        raw = proc.stderr.read() or b""
+    except Exception:
+        return ""
+    return raw.decode(errors="replace")[-max_chars:].strip()
 
 
 class RecordingManager:
@@ -11,11 +31,25 @@ class RecordingManager:
     def __init__(self) -> None:
         self._processes: dict[int, subprocess.Popen] = {}
 
+    def _log_exit(self, camera_id: int, proc: subprocess.Popen) -> None:
+        code = proc.returncode
+        tail = _read_stderr_tail(proc)
+        if tail:
+            logger.warning(
+                "ffmpeg for camera %s exited with code %s: %s",
+                camera_id,
+                code,
+                tail,
+            )
+        else:
+            logger.warning("ffmpeg for camera %s exited with code %s", camera_id, code)
+
     def is_active(self, camera_id: int) -> bool:
         proc = self._processes.get(camera_id)
         if proc is None:
             return False
         if proc.poll() is not None:
+            self._log_exit(camera_id, proc)
             self._processes.pop(camera_id, None)
             return False
         return True
@@ -27,16 +61,14 @@ class RecordingManager:
     def _prune_dead(self) -> None:
         for camera_id, proc in list(self._processes.items()):
             if proc.poll() is not None:
-                code = proc.returncode
-                logger.warning("ffmpeg for camera %s exited with code %s", camera_id, code)
+                self._log_exit(camera_id, proc)
                 self._processes.pop(camera_id, None)
 
     def start(self, camera_id: int, rtsp_url: str, output_dir: Path) -> None:
         if self.is_active(camera_id):
             return
 
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_pattern = str(output_dir / "%Y" / "%m" / "%d" / "%H-%M-%S.mp4")
+        output_pattern = _segment_output_pattern(output_dir)
 
         cmd = [
             "ffmpeg",
@@ -47,6 +79,9 @@ class RecordingManager:
             "tcp",
             "-i",
             rtsp_url,
+            "-map",
+            "0:v:0",
+            "-an",
             "-c",
             "copy",
             "-f",
@@ -56,6 +91,8 @@ class RecordingManager:
             "-reset_timestamps",
             "1",
             "-strftime",
+            "1",
+            "-strftime_mkdir",
             "1",
             output_pattern,
         ]
@@ -79,6 +116,8 @@ class RecordingManager:
             except subprocess.TimeoutExpired:
                 proc.kill()
                 proc.wait()
+        if proc.poll() is not None:
+            self._log_exit(camera_id, proc)
         logger.info("Stopped recording for camera %s", camera_id)
 
     def stop_all(self) -> None:

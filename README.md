@@ -53,9 +53,13 @@ rtsp://USER:PASS@192.168.1.100:554/Streaming/Channels/101
 
 ```bash
 ffmpeg -rtsp_transport tcp -i RTSP_URL \
-  -c copy -f segment -segment_time 30 -reset_timestamps 1 -strftime 1 \
+  -map 0:v:0 -an -c copy \
+  -f segment -segment_time 30 -reset_timestamps 1 \
+  -strftime 1 -strftime_mkdir 1 \
   /recordings/cam{id}/%Y/%m/%d/%H-%M-%S.mp4
 ```
+
+Today's `YYYY/MM/DD` folder is also created in Python before FFmpeg starts (works reliably on Windows mounts).
 
 ## Export command
 
