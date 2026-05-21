@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.models.segment import Segment
 from app.services.segment_service import list_segments_for_range
+from app.timezone_util import ensure_aware
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +24,15 @@ def _trim_for_range(
     range_end: datetime,
 ) -> tuple[float, float] | None:
     """Seconds into segment file (ss) and duration for the overlap with [range_start, range_end]."""
-    overlap_start = max(segment.start_time, range_start)
-    overlap_end = min(segment.end_time, range_end)
+    seg_start = ensure_aware(segment.start_time)
+    seg_end = ensure_aware(segment.end_time)
+    range_start = ensure_aware(range_start)
+    range_end = ensure_aware(range_end)
+    overlap_start = max(seg_start, range_start)
+    overlap_end = min(seg_end, range_end)
     if overlap_start >= overlap_end:
         return None
-    ss = (overlap_start - segment.start_time).total_seconds()
+    ss = (overlap_start - seg_start).total_seconds()
     duration = (overlap_end - overlap_start).total_seconds()
     if duration <= 0:
         return None
@@ -71,6 +76,8 @@ def export_clip(
     start: datetime,
     end: datetime,
 ) -> Path:
+    start = ensure_aware(start)
+    end = ensure_aware(end)
     segments = list_segments_for_range(db, camera_id, start, end)
     if not segments:
         raise ExportError("No recordings found for the selected time range.")

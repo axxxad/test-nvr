@@ -16,6 +16,13 @@ def now() -> datetime:
     return datetime.now(get_tz())
 
 
+def ensure_aware(dt: datetime) -> datetime:
+    """SQLite often returns naive datetimes; treat them as app local wall time."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=get_tz())
+    return dt.astimezone(get_tz())
+
+
 def parse_filename_timestamp(
     year: int,
     month: int,

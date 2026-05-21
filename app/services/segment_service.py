@@ -1,9 +1,10 @@
-from datetime import datetime, time, timedelta, timezone
+from datetime import datetime
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.segment import Segment
+from app.timezone_util import ensure_aware
 
 
 def list_segments_for_range(
@@ -13,12 +14,17 @@ def list_segments_for_range(
     end: datetime,
 ) -> list[Segment]:
     """Segments that overlap [start, end], ordered by start_time."""
+    start = ensure_aware(start)
+    end = ensure_aware(end)
+    # SQLite stores naive wall-clock times; compare without tz for the query.
+    start_naive = start.replace(tzinfo=None)
+    end_naive = end.replace(tzinfo=None)
     return (
         db.query(Segment)
         .filter(
             Segment.camera_id == camera_id,
-            Segment.start_time < end,
-            Segment.end_time > start,
+            Segment.start_time < end_naive,
+            Segment.end_time > start_naive,
         )
         .order_by(Segment.start_time)
         .all()

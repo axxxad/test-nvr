@@ -18,7 +18,7 @@ def run_retention_cleanup(db: Session) -> int:
 
     cameras = db.query(Camera).all()
     for camera in cameras:
-        cutoff = current - timedelta(days=camera.retention_days)
+        cutoff = (current - timedelta(days=camera.retention_days)).replace(tzinfo=None)
         old_segments = (
             db.query(Segment)
             .filter(Segment.camera_id == camera.id, Segment.end_time < cutoff)
