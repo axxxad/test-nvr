@@ -24,6 +24,7 @@ def form_defaults(camera: Camera | None = None) -> dict:
             "rtsp_password": "",
             "rtsp_path": "/Streaming/Channels/101",
             "retention_days": 2,
+            "record_audio": False,
         }
     try:
         parts = parse_rtsp_url(camera.rtsp_url)
@@ -43,6 +44,7 @@ def form_defaults(camera: Camera | None = None) -> dict:
         "rtsp_password": str(parts["password"]),
         "rtsp_path": str(parts["path"]),
         "retention_days": camera.retention_days,
+        "record_audio": camera.record_audio,
     }
 
 
@@ -61,6 +63,7 @@ def create_camera(db: Session, data: CameraForm) -> Camera:
         name=data.name,
         rtsp_url=_rtsp_url_from_form(data),
         retention_days=data.retention_days,
+        record_audio=data.record_audio,
     )
     db.add(camera)
     db.commit()
@@ -72,6 +75,7 @@ def update_camera(db: Session, camera: Camera, data: CameraForm) -> Camera:
     camera.name = data.name
     camera.rtsp_url = _rtsp_url_from_form(data)
     camera.retention_days = data.retention_days
+    camera.record_audio = data.record_audio
     db.commit()
     db.refresh(camera)
     return camera

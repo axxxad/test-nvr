@@ -53,7 +53,7 @@ rtsp://USER:PASS@192.168.1.100:554/Streaming/Channels/101
 
 ```bash
 ffmpeg -rtsp_transport tcp -i RTSP_URL \
-  -map 0:v:0 -an -c copy \
+  -map 0:v:0 [-map 0:a:0? -c:a aac if record_audio] -an -c copy \
   -f segment -segment_time 30 -reset_timestamps 1 \
   -strftime 1 -strftime_mkdir 1 \
   /recordings/cam{id}/%Y/%m/%d/%H-%M-%S.mp4

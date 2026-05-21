@@ -23,3 +23,8 @@ def migrate_schema() -> None:
         "retention_days",
         "ALTER TABLE cameras ADD COLUMN retention_days INTEGER NOT NULL DEFAULT 2",
     )
+    _add_column_if_missing(
+        "cameras",
+        "record_audio",
+        "ALTER TABLE cameras ADD COLUMN record_audio BOOLEAN NOT NULL DEFAULT 0",
+    )

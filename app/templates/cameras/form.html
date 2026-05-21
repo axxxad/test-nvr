@@ -66,6 +66,19 @@
                min="1" max="365" class="input input-bordered w-full" />
       </div>
 
+      <div class="form-control">
+        <label class="label cursor-pointer justify-start gap-3">
+          <input type="checkbox" name="record_audio" value="1" class="checkbox checkbox-primary"
+                 {% if record_audio %}checked{% endif %} />
+          <span>
+            <span class="label-text font-medium">Record audio</span>
+            <span class="label-text-alt block mt-0.5 text-base-content/60">
+              Main stream (<code>101</code>) usually has audio; substream (<code>102</code>) often does not.
+            </span>
+          </span>
+        </label>
+      </div>
+
       <div class="card-actions justify-end mt-6">
         <a href="/cameras" class="btn btn-ghost">Cancel</a>
         <button type="submit" class="btn btn-primary">{{ submit_label }}</button>

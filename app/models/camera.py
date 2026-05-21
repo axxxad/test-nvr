@@ -18,6 +18,7 @@ class Camera(Base):
     rtsp_url: Mapped[str] = mapped_column(String(1024), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     recording_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    record_audio: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     retention_days: Mapped[int] = mapped_column(Integer, default=2, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

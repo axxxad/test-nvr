@@ -64,6 +64,10 @@
     <div class="card-body">
       <h2 class="card-title text-lg">Settings</h2>
       <p class="text-sm"><span class="text-base-content/60">Retention:</span> {{ camera.retention_days }} days</p>
+      <p class="text-sm">
+        <span class="text-base-content/60">Audio:</span>
+        {% if camera.record_audio %}On{% else %}Off{% endif %}
+      </p>
       <p class="text-sm"><span class="text-base-content/60">Added:</span> {{ camera.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
 
       <div class="divider my-2"></div>

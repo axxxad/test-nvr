@@ -22,6 +22,10 @@ router = APIRouter(prefix="/cameras", tags=["cameras"])
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
 
 
+def _form_checkbox(value: str | None) -> bool:
+    return value is not None and value.lower() not in ("", "0", "false", "off")
+
+
 def _parse_form(
     name: str,
     rtsp_host: str,
@@ -30,6 +34,7 @@ def _parse_form(
     rtsp_password: str,
     rtsp_path: str,
     retention_days: int,
+    record_audio: str | None = None,
 ) -> tuple[CameraForm | None, dict[str, str]]:
     try:
         return CameraForm(
@@ -40,6 +45,7 @@ def _parse_form(
             rtsp_password=rtsp_password,
             rtsp_path=rtsp_path,
             retention_days=retention_days,
+            record_audio=_form_checkbox(record_audio),
         ), {}
     except ValidationError as exc:
         errors: dict[str, str] = {}
@@ -102,6 +108,7 @@ def create_camera(
     rtsp_password: str = Form(""),
     rtsp_path: str = Form("/Streaming/Channels/101"),
     retention_days: int = Form(2),
+    record_audio: str | None = Form(None),
     db: Session = Depends(get_db),
 ):
     values = {
@@ -112,8 +119,18 @@ def create_camera(
         "rtsp_password": rtsp_password,
         "rtsp_path": rtsp_path,
         "retention_days": retention_days,
+        "record_audio": _form_checkbox(record_audio),
     }
-    data, errors = _parse_form(**values)
+    data, errors = _parse_form(
+        name=name,
+        rtsp_host=rtsp_host,
+        rtsp_port=rtsp_port,
+        rtsp_username=rtsp_username,
+        rtsp_password=rtsp_password,
+        rtsp_path=rtsp_path,
+        retention_days=retention_days,
+        record_audio=record_audio,
+    )
     if data is None:
         return templates.TemplateResponse(
             request,
@@ -195,6 +212,7 @@ def update_camera(
     rtsp_password: str = Form(""),
     rtsp_path: str = Form("/Streaming/Channels/101"),
     retention_days: int = Form(2),
+    record_audio: str | None = Form(None),
     db: Session = Depends(get_db),
 ):
     camera = camera_service.get_camera(db, camera_id)
@@ -210,8 +228,18 @@ def update_camera(
         "rtsp_password": rtsp_password,
         "rtsp_path": rtsp_path,
         "retention_days": retention_days,
+        "record_audio": _form_checkbox(record_audio),
     }
-    data, errors = _parse_form(**values)
+    data, errors = _parse_form(
+        name=name,
+        rtsp_host=rtsp_host,
+        rtsp_port=rtsp_port,
+        rtsp_username=rtsp_username,
+        rtsp_password=rtsp_password,
+        rtsp_path=rtsp_path,
+        retention_days=retention_days,
+        record_audio=record_audio,
+    )
     if data is None:
         return templates.TemplateResponse(
             request,

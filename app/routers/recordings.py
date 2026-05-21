@@ -11,6 +11,7 @@ from starlette import status
 from urllib.parse import quote
 
 from app.config import settings
+from app.export_filename import build_export_download_name
 from app.database import get_db
 from app.models.segment import Segment
 from app.services import camera_service
@@ -191,6 +192,7 @@ def browse_recordings(
             "preset_links": preset_links,
             "active_preset": active_preset,
             "tz_label": tz_label(),
+            "export_name_val": request.query_params.get("export_name", camera.name),
         },
     )
 
@@ -213,6 +215,7 @@ def export_recording(
     camera_id: int,
     from_time: str = Form(""),
     to_time: str = Form(""),
+    export_name: str = Form(""),
     db: Session = Depends(get_db),
 ):
     camera = camera_service.get_camera(db, camera_id)
@@ -221,7 +224,7 @@ def export_recording(
 
     start_dt = parse_form_local(from_time)
     end_dt = parse_form_local(to_time)
-    query = f"from={from_time}&to={to_time}"
+    query = urlencode({"from": from_time, "to": to_time, "export_name": export_name.strip()})
 
     if not start_dt or not end_dt:
         return RedirectResponse(
@@ -242,10 +245,7 @@ def export_recording(
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
-    filename = (
-        f"{camera.name.replace(' ', '_')}_"
-        f"{start_dt.strftime('%Y%m%d_%H%M%S')}-{end_dt.strftime('%H%M%S')}.mp4"
-    )
+    filename = build_export_download_name(export_name, camera.name, start_dt, end_dt)
     return FileResponse(
         path=output_path,
         media_type="video/mp4",

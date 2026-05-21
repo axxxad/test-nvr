@@ -70,7 +70,30 @@ class RecordingManager:
                 self._log_exit(camera_id, proc)
                 self._processes.pop(camera_id, None)
 
-    def start(self, camera_id: int, rtsp_url: str, output_dir: Path) -> None:
+    def _output_codec_args(self, record_audio: bool) -> list[str]:
+        if record_audio:
+            return [
+                "-map",
+                "0:v:0",
+                "-map",
+                "0:a:0?",
+                "-c:v",
+                "copy",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "128k",
+            ]
+        return ["-map", "0:v:0", "-an", "-c", "copy"]
+
+    def start(
+        self,
+        camera_id: int,
+        rtsp_url: str,
+        output_dir: Path,
+        *,
+        record_audio: bool = False,
+    ) -> None:
         if self.is_active(camera_id):
             return
 
@@ -85,11 +108,7 @@ class RecordingManager:
             "tcp",
             "-i",
             rtsp_url,
-            "-map",
-            "0:v:0",
-            "-an",
-            "-c",
-            "copy",
+            *self._output_codec_args(record_audio),
             "-f",
             "segment",
             "-segment_time",
@@ -109,7 +128,12 @@ class RecordingManager:
             stderr=subprocess.PIPE,
         )
         self._processes[camera_id] = proc
-        logger.info("Started recording for camera %s → %s", camera_id, output_pattern)
+        logger.info(
+            "Started recording for camera %s (audio=%s) → %s",
+            camera_id,
+            record_audio,
+            output_pattern,
+        )
 
     def stop(self, camera_id: int) -> None:
         proc = self._processes.pop(camera_id, None)

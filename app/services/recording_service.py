@@ -21,7 +21,12 @@ def is_recording(camera_id: int) -> bool:
 
 def start_recording(camera: Camera) -> None:
     ffmpeg_url = rtsp_url_for_ffmpeg(camera.rtsp_url)
-    recording_manager.start(camera.id, ffmpeg_url, camera_recordings_dir(camera.id))
+    recording_manager.start(
+        camera.id,
+        ffmpeg_url,
+        camera_recordings_dir(camera.id),
+        record_audio=camera.record_audio,
+    )
 
 
 def stop_recording(camera_id: int) -> None:

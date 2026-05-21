@@ -9,6 +9,7 @@ class CameraForm(BaseModel):
     rtsp_password: str = Field(max_length=512)
     rtsp_path: str = Field(default="/Streaming/Channels/101", max_length=512)
     retention_days: int = Field(default=2, ge=1, le=365)
+    record_audio: bool = False
 
     @field_validator("name", "rtsp_host", "rtsp_username", "rtsp_path")
     @classmethod
