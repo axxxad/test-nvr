@@ -242,7 +242,10 @@ def export_recording(
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
-    filename = f"{camera.name.replace(' ', '_')}_{start_dt.strftime('%Y%m%d_%H%M')}-{end_dt.strftime('%H%M')}.mp4"
+    filename = (
+        f"{camera.name.replace(' ', '_')}_"
+        f"{start_dt.strftime('%Y%m%d_%H%M%S')}-{end_dt.strftime('%H%M%S')}.mp4"
+    )
     return FileResponse(
         path=output_path,
         media_type="video/mp4",

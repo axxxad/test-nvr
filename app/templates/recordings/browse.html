@@ -51,7 +51,7 @@
           <span class="label-text font-medium">From</span>
         </label>
         <input type="datetime-local" id="range-from" name="from" value="{{ from_val }}"
-               class="input input-bordered" required />
+               step="1" class="input input-bordered" required />
       </div>
       <div class="form-control">
         <label class="label py-0" for="range-to">
@@ -59,7 +59,7 @@
           <span class="label-text-alt">now / latest</span>
         </label>
         <input type="datetime-local" id="range-to" name="to" value="{{ to_val }}"
-               class="input input-bordered" required />
+               step="1" class="input input-bordered" required />
       </div>
       <button type="submit" id="load-timeline" class="btn btn-primary">Load</button>
     </form>
@@ -138,11 +138,13 @@
       <form method="post" action="/cameras/{{ camera.id }}/recordings/export" class="mt-4 grid gap-3 sm:grid-cols-2">
         <div class="form-control">
           <label class="label py-0"><span class="label-text text-xs">Export from</span></label>
-          <input type="datetime-local" id="export-from" name="from_time" value="{{ from_val }}" class="input input-bordered input-sm" />
+          <input type="datetime-local" id="export-from" name="from_time" value="{{ from_val }}"
+                 step="1" class="input input-bordered input-sm" />
         </div>
         <div class="form-control">
           <label class="label py-0"><span class="label-text text-xs">Export to</span></label>
-          <input type="datetime-local" id="export-to" name="to_time" value="{{ to_val }}" class="input input-bordered input-sm" />
+          <input type="datetime-local" id="export-to" name="to_time" value="{{ to_val }}"
+                 step="1" class="input input-bordered input-sm" />
         </div>
         <div class="sm:col-span-2">
           <button type="submit" id="export-btn" class="btn btn-secondary">
@@ -202,6 +204,6 @@
 
 {% block extra_js %}
 {% if segments %}
-<script src="/static/js/timeline-player.js?v=4"></script>
+<script src="/static/js/timeline-player.js?v=5"></script>
 {% endif %}
 {% endblock %}

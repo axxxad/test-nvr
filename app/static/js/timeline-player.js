@@ -59,7 +59,9 @@
       "T" +
       pad(d.getHours()) +
       ":" +
-      pad(d.getMinutes())
+      pad(d.getMinutes()) +
+      ":" +
+      pad(d.getSeconds())
     );
   }
 
@@ -137,8 +139,9 @@
   function updateMarkers() {
     if (selectionStartMs < rangeStartMs) selectionStartMs = rangeStartMs;
     if (selectionEndMs > rangeEndMs) selectionEndMs = rangeEndMs;
+    const minSpanMs = 1000;
     if (selectionEndMs <= selectionStartMs) {
-      selectionEndMs = Math.min(rangeEndMs, selectionStartMs + segmentDuration * 1000);
+      selectionEndMs = Math.min(rangeEndMs, selectionStartMs + minSpanMs);
     }
 
     markerStart.style.left = pct(selectionStartMs) + "%";
@@ -179,13 +182,21 @@
     playhead.style.left = pct(playheadMs) + "%";
   }
 
+  const minSelectionMs = 1000;
+
   function setSelectionIn(ms) {
-    selectionStartMs = Math.max(rangeStartMs, Math.min(ms, selectionEndMs - 1000));
+    selectionStartMs = Math.max(
+      rangeStartMs,
+      Math.min(ms, selectionEndMs - minSelectionMs)
+    );
     updateMarkers();
   }
 
   function setSelectionOut(ms) {
-    selectionEndMs = Math.min(rangeEndMs, Math.max(ms, selectionStartMs + 1000));
+    selectionEndMs = Math.min(
+      rangeEndMs,
+      Math.max(ms, selectionStartMs + minSelectionMs)
+    );
     updateMarkers();
   }
 

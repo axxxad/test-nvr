@@ -28,8 +28,11 @@ def parse_filename_timestamp(
     return datetime(year, month, day, hour, minute, second, tzinfo=get_tz())
 
 
+FORM_LOCAL_FMT = "%Y-%m-%dT%H:%M:%S"
+
+
 def parse_form_local(value: str) -> datetime | None:
-    """Parse HTML datetime-local value as local app time."""
+    """Parse HTML datetime-local value as local app time (with or without seconds)."""
     value = value.strip()
     if not value:
         return None
@@ -43,9 +46,9 @@ def parse_form_local(value: str) -> datetime | None:
 
 
 def format_form_local(dt: datetime) -> str:
-    """Value for <input type=\"datetime-local\"> (no offset suffix)."""
+    """Value for <input type=\"datetime-local\" step=\"1\"> (no offset suffix)."""
     local = dt.astimezone(get_tz()) if dt.tzinfo else dt.replace(tzinfo=get_tz())
-    return local.strftime("%Y-%m-%dT%H:%M")
+    return local.strftime(FORM_LOCAL_FMT)
 
 
 def start_of_day(dt: datetime) -> datetime:
