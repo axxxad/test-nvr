@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}{{ camera.name }} — Recordings{% endblock %}
+{% block main_class %}max-w-6xl{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/timeline.css?v=3">
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <a href="/cameras" class="btn btn-ghost btn-sm">← Cameras</a>
+</div>
+
+<div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+  <h1 class="text-2xl font-bold">{{ camera.name }}</h1>
+  {% if recording_active %}
+  <span class="badge badge-success gap-2">
+    <span class="inline-block w-2 h-2 rounded-full bg-success-content animate-pulse"></span>
+    Recording
+  </span>
+  {% endif %}
+</div>
+
+{% if error %}
+<div role="alert" class="alert alert-error mb-4">
+  <span>{{ error }}</span>
+</div>
+{% endif %}
+
+<div class="card bg-base-100 shadow mb-4">
+  <div class="card-body">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <h2 class="card-title text-lg mb-0">Time range</h2>
+      <span class="text-xs text-base-content/60">End defaults to {{ to_hint }}</span>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mb-4">
+      <a href="{{ preset_links.today }}"
+         class="btn btn-sm {% if active_preset == 'today' %}btn-primary{% else %}btn-outline{% endif %}">Today</a>
+      <a href="{{ preset_links.yesterday }}"
+         class="btn btn-sm {% if active_preset == 'yesterday' %}btn-primary{% else %}btn-outline{% endif %}">Yesterday</a>
+      <a href="{{ preset_links.last24h }}"
+         class="btn btn-sm {% if active_preset == 'last24h' %}btn-primary{% else %}btn-outline{% endif %}">Last 24h</a>
+    </div>
+
+    <form method="get" action="/cameras/{{ camera.id }}/recordings"
+          class="grid gap-3 sm:grid-cols-[1fr_1fr_auto] items-end">
+      <div class="form-control">
+        <label class="label py-0" for="range-from">
+          <span class="label-text font-medium">From</span>
+        </label>
+        <input type="datetime-local" id="range-from" name="from" value="{{ from_val }}"
+               class="input input-bordered" required />
+      </div>
+      <div class="form-control">
+        <label class="label py-0" for="range-to">
+          <span class="label-text font-medium">To</span>
+          <span class="label-text-alt">now / latest</span>
+        </label>
+        <input type="datetime-local" id="range-to" name="to" value="{{ to_val }}"
+               class="input input-bordered" required />
+      </div>
+      <button type="submit" id="load-timeline" class="btn btn-primary">Load</button>
+    </form>
+  </div>
+</div>
+
+{% if segments %}
+<script type="application/json" id="segments-data">{{ segments_json|safe }}</script>
+<div
+  id="timeline-root"
+  class="timeline-root"
+  data-camera-id="{{ camera.id }}"
+  data-segment-duration="{{ segment_duration }}"
+  data-range-start="{{ range_start_iso }}"
+  data-range-end="{{ range_end_iso }}"
+  data-selection-start="{{ selection_start_iso }}"
+  data-selection-end="{{ selection_end_iso }}"
+>
+  <div class="card bg-base-100 shadow">
+    <div class="card-body">
+      <h2 class="card-title text-lg">Preview</h2>
+      <video id="preview-video" controls playsinline class="w-full"></video>
+      <p id="time-current" class="text-sm font-mono text-base-content/70 mt-2">—</p>
+
+      <div class="timeline-legend mt-4 mb-1">
+        <span class="legend-play">Playhead (tall)</span>
+        <span class="legend-in">Export IN</span>
+        <span class="legend-out">Export OUT</span>
+        <span class="legend-seg">Segments</span>
+      </div>
+
+      <div class="timeline-lanes">
+        <div class="timeline-tracks-wrap">
+          <div id="timeline-playhead" class="timeline-playhead" title="Drag to scrub">
+            <span class="playhead-knob" aria-hidden="true"></span>
+            <span class="playhead-hit" aria-hidden="true"></span>
+          </div>
+          <div id="timeline-scrub" class="timeline-lane timeline-lane-scrub" title="Click to seek">
+            <div id="timeline-segments" class="timeline-segments"></div>
+          </div>
+          <div id="timeline-export" class="timeline-lane timeline-lane-export" title="Drag IN / OUT tabs">
+            <div id="timeline-range" class="timeline-range"></div>
+            <div id="marker-start" class="export-handle export-handle-start">
+              <span class="export-handle-hit"></span>
+              <span class="export-handle-tab">IN</span>
+            </div>
+            <div id="marker-end" class="export-handle export-handle-end">
+              <span class="export-handle-hit"></span>
+              <span class="export-handle-tab">OUT</span>
+            </div>
+          </div>
+        </div>
+        <p class="text-xs text-base-content/50 mt-1">
+          Tall white line + circle = playhead (top). Small IN/OUT tabs = export (bottom).
+        </p>
+      </div>
+
+      <div class="flex flex-wrap justify-between gap-2 text-xs font-mono mt-2">
+        <span><span class="text-base-content/50">In:</span> <span id="time-start">—</span></span>
+        <span><span class="text-base-content/50">Out:</span> <span id="time-end">—</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card bg-base-100 shadow mt-4">
+    <div class="card-body">
+      <h2 class="card-title text-lg">Export selection</h2>
+      <p class="text-sm text-base-content/70">
+        Use the <strong>top row</strong> to scrub preview; drag <strong>IN</strong> / <strong>OUT</strong> tabs on the <strong>bottom row</strong> for export (separate from playhead).
+      </p>
+      <div class="flex flex-wrap gap-2 mt-2">
+        <button type="button" id="btn-set-in" class="btn btn-outline btn-sm">Set IN to playhead</button>
+        <button type="button" id="btn-set-out" class="btn btn-outline btn-sm">Set OUT to playhead</button>
+      </div>
+
+      <form method="post" action="/cameras/{{ camera.id }}/recordings/export" class="mt-4 grid gap-3 sm:grid-cols-2">
+        <div class="form-control">
+          <label class="label py-0"><span class="label-text text-xs">Export from</span></label>
+          <input type="datetime-local" id="export-from" name="from_time" value="{{ from_val }}" class="input input-bordered input-sm" />
+        </div>
+        <div class="form-control">
+          <label class="label py-0"><span class="label-text text-xs">Export to</span></label>
+          <input type="datetime-local" id="export-to" name="to_time" value="{{ to_val }}" class="input input-bordered input-sm" />
+        </div>
+        <div class="sm:col-span-2">
+          <button type="submit" id="export-btn" class="btn btn-secondary">
+            Export clip (<span id="export-count">{{ segments|length }}</span> segments)
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="collapse collapse-arrow bg-base-100 shadow mt-4">
+  <input type="checkbox" />
+  <div class="collapse-title font-medium">Segment list ({{ segments|length }})</div>
+  <div class="collapse-content overflow-x-auto">
+    <table class="table table-sm">
+      <thead>
+        <tr>
+          <th>Start (UTC)</th>
+          <th>End (UTC)</th>
+          <th class="text-right">Size</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for seg in segments %}
+        <tr class="hover cursor-pointer segment-row" data-start="{{ seg.start_time.isoformat() }}">
+          <td class="font-mono text-xs">{{ seg.start_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+          <td class="font-mono text-xs">{{ seg.end_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+          <td class="text-right text-xs">{{ (seg.size_bytes / 1024 / 1024)|round(2) }} MB</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card bg-base-100 shadow">
+  <div class="card-body items-center text-center py-12">
+    <p class="text-base-content/70">No segments in this range.</p>
+    <p class="text-sm text-base-content/50 mt-2">Pick a date range and click <strong>Load recordings</strong>.</p>
+  </div>
+</div>
+{% endif %}
+
+<div class="card bg-base-100 shadow mt-4">
+  <div class="card-body py-4">
+    <form method="post" action="/cameras/{{ camera.id }}/settings" class="flex flex-wrap items-end gap-3">
+      <div class="form-control">
+        <label class="label py-0" for="retention_days"><span class="label-text text-xs">Retention (days)</span></label>
+        <input type="number" id="retention_days" name="retention_days" value="{{ camera.retention_days }}" min="1" max="365" class="input input-bordered input-sm w-24" />
+      </div>
+      <button type="submit" class="btn btn-outline btn-sm">Save</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if segments %}
+<script src="/static/js/timeline-player.js?v=3"></script>
+{% endif %}
+{% endblock %}
