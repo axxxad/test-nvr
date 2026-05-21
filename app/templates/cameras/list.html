@@ -25,8 +25,10 @@
       <tbody>
         {% for camera in cameras %}
         {% set rec = recording[camera.id] %}
-        <tr>
-          <td class="font-medium">{{ camera.name }}</td>
+        <tr class="hover">
+          <td>
+            <a href="/cameras/{{ camera.id }}" class="font-medium link link-hover">{{ camera.name }}</a>
+          </td>
           <td>
             {% if rec.active %}
             <span class="badge badge-success gap-2">
@@ -41,20 +43,18 @@
           </td>
           <td class="text-right">
             <div class="flex justify-end gap-1 flex-wrap">
+              <a href="/cameras/{{ camera.id }}" class="btn btn-ghost btn-sm">View</a>
+              <a href="/cameras/{{ camera.id }}/live" class="btn btn-ghost btn-sm">Live</a>
               <a href="/cameras/{{ camera.id }}/recordings" class="btn btn-ghost btn-sm">Browse</a>
               {% if rec.enabled %}
               <form method="post" action="/cameras/{{ camera.id }}/recording/disable" class="inline">
-                <button type="submit" class="btn btn-outline btn-sm">Stop recording</button>
+                <button type="submit" class="btn btn-outline btn-sm">Stop</button>
               </form>
               {% else %}
               <form method="post" action="/cameras/{{ camera.id }}/recording/enable" class="inline">
-                <button type="submit" class="btn btn-primary btn-sm">Start recording</button>
+                <button type="submit" class="btn btn-primary btn-sm">Record</button>
               </form>
               {% endif %}
-              <form method="post" action="/cameras/{{ camera.id }}/delete" class="inline"
-                    onsubmit="return confirm('Remove {{ camera.name }}?');">
-                <button type="submit" class="btn btn-ghost btn-sm text-error">Delete</button>
-              </form>
             </div>
           </td>
         </tr>

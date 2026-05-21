@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models.camera import Camera
+from app.rtsp import rtsp_url_for_ffmpeg
 from app.services.recording_manager import recording_manager
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,8 @@ def is_recording(camera_id: int) -> bool:
 
 
 def start_recording(camera: Camera) -> None:
-    recording_manager.start(camera.id, camera.rtsp_url, camera_recordings_dir(camera.id))
+    ffmpeg_url = rtsp_url_for_ffmpeg(camera.rtsp_url)
+    recording_manager.start(camera.id, ffmpeg_url, camera_recordings_dir(camera.id))
 
 
 def stop_recording(camera_id: int) -> None:

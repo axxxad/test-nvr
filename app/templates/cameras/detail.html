@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}{{ camera.name }} — CCTV NVR{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <a href="/cameras" class="btn btn-ghost btn-sm">← Cameras</a>
+</div>
+{% if flash %}
+<div role="alert" class="alert alert-success mb-4"><span>{{ flash }}</span></div>
+{% endif %}
+
+<div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+  <h1 class="text-2xl font-bold">{{ camera.name }}</h1>
+  <div class="flex flex-wrap gap-2">
+    {% if recording_active %}
+    <span class="badge badge-success gap-2">
+      <span class="inline-block w-2 h-2 rounded-full bg-success-content animate-pulse"></span>
+      Recording
+    </span>
+    {% elif recording_enabled %}
+    <span class="badge badge-warning">Enabled (not running)</span>
+    {% else %}
+    <span class="badge badge-ghost">Recording off</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid gap-4 lg:grid-cols-2">
+  <div class="card bg-base-100 shadow">
+    <div class="card-body">
+      <h2 class="card-title text-lg">Connection</h2>
+      {% if connection %}
+      <dl class="space-y-2 text-sm">
+        <div class="flex justify-between gap-4 border-b border-base-300 pb-2">
+          <dt class="text-base-content/60">Host</dt>
+          <dd class="font-mono">{{ connection.host }}:{{ connection.port }}</dd>
+        </div>
+        <div class="flex justify-between gap-4 border-b border-base-300 pb-2">
+          <dt class="text-base-content/60">Username</dt>
+          <dd class="font-mono">{{ connection.username or '—' }}</dd>
+        </div>
+        <div class="flex justify-between gap-4 border-b border-base-300 pb-2">
+          <dt class="text-base-content/60">Password</dt>
+          <dd class="font-mono">••••••••</dd>
+        </div>
+        <div class="flex justify-between gap-4 border-b border-base-300 pb-2">
+          <dt class="text-base-content/60">Path</dt>
+          <dd class="font-mono text-xs">{{ connection.path }}</dd>
+        </div>
+        <div class="pt-2">
+          <dt class="text-base-content/60 text-xs mb-1">RTSP URL (masked)</dt>
+          <dd class="font-mono text-xs break-all bg-base-200 rounded p-2">{{ masked_url }}</dd>
+        </div>
+      </dl>
+      {% else %}
+      <p class="text-warning text-sm">Could not parse stored URL — use Edit to fix connection fields.</p>
+      <p class="font-mono text-xs break-all mt-2">{{ camera.rtsp_url }}</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card bg-base-100 shadow">
+    <div class="card-body">
+      <h2 class="card-title text-lg">Settings</h2>
+      <p class="text-sm"><span class="text-base-content/60">Retention:</span> {{ camera.retention_days }} days</p>
+      <p class="text-sm"><span class="text-base-content/60">Added:</span> {{ camera.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+
+      <div class="divider my-2"></div>
+      <div class="flex flex-wrap gap-2">
+        <a href="/cameras/{{ camera.id }}/live" class="btn btn-secondary btn-sm">Live preview</a>
+        <a href="/cameras/{{ camera.id }}/recordings" class="btn btn-primary btn-sm">Browse recordings</a>
+        <a href="/cameras/{{ camera.id }}/edit" class="btn btn-outline btn-sm">Edit</a>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mt-4">
+        {% if recording_enabled %}
+        <form method="post" action="/cameras/{{ camera.id }}/recording/disable">
+          <button type="submit" class="btn btn-outline btn-sm">Stop recording</button>
+        </form>
+        {% else %}
+        <form method="post" action="/cameras/{{ camera.id }}/recording/enable">
+          <button type="submit" class="btn btn-primary btn-sm">Start recording</button>
+        </form>
+        {% endif %}
+        <form method="post" action="/cameras/{{ camera.id }}/delete"
+              onsubmit="return confirm('Delete {{ camera.name }}?');">
+          <button type="submit" class="btn btn-ghost btn-sm text-error">Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

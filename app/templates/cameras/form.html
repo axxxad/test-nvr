@@ -1,84 +1,74 @@
 {% extends "base.html" %}
 
-{% block title %}Add camera — CCTV NVR{% endblock %}
+{% block title %}{{ title }} — CCTV NVR{% endblock %}
 
 {% block content %}
 <div class="mb-6">
-  <a href="/cameras" class="btn btn-ghost btn-sm">← Back to cameras</a>
+  <a href="/cameras" class="btn btn-ghost btn-sm">← Cameras</a>
 </div>
 
-<div class="card bg-base-100 shadow max-w-lg mx-auto">
+<div class="card bg-base-100 shadow max-w-xl mx-auto">
   <div class="card-body">
-    <h1 class="card-title text-2xl">Add camera</h1>
+    <h1 class="card-title text-2xl">{{ title }}</h1>
+    <p class="text-sm text-base-content/60">
+      Use plain password characters — special symbols (@, #, etc.) are encoded automatically for FFmpeg.
+    </p>
 
-    <form method="post" action="/cameras/new" class="space-y-4 mt-4">
+    <form method="post" action="{{ action_url }}" class="space-y-4 mt-4">
       <div class="form-control">
-        <label class="label" for="name">
-          <span class="label-text">Name</span>
-        </label>
-        <input
-          type="text"
-          id="name"
-          name="name"
-          value="{{ name }}"
-          placeholder="Front door"
-          class="input input-bordered w-full{% if errors.get('name') %} input-error{% endif %}"
-          required
-        />
-        {% if errors.get('name') %}
-        <label class="label">
-          <span class="label-text-alt text-error">{{ errors.name }}</span>
-        </label>
-        {% endif %}
+        <label class="label" for="name"><span class="label-text">Name</span></label>
+        <input type="text" id="name" name="name" value="{{ name }}"
+               class="input input-bordered w-full{% if errors.get('name') %} input-error{% endif %}" required />
+        {% if errors.get('name') %}<label class="label"><span class="label-text-alt text-error">{{ errors.name }}</span></label>{% endif %}
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="form-control sm:col-span-1">
+          <label class="label" for="rtsp_host"><span class="label-text">Host / IP</span></label>
+          <input type="text" id="rtsp_host" name="rtsp_host" value="{{ rtsp_host }}"
+                 placeholder="192.168.1.100"
+                 class="input input-bordered w-full font-mono{% if errors.get('rtsp_host') %} input-error{% endif %}" required />
+          {% if errors.get('rtsp_host') %}<label class="label"><span class="label-text-alt text-error">{{ errors.rtsp_host }}</span></label>{% endif %}
+        </div>
+        <div class="form-control">
+          <label class="label" for="rtsp_port"><span class="label-text">Port</span></label>
+          <input type="number" id="rtsp_port" name="rtsp_port" value="{{ rtsp_port }}" min="1" max="65535"
+                 class="input input-bordered w-full{% if errors.get('rtsp_port') %} input-error{% endif %}" />
+        </div>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="form-control">
+          <label class="label" for="rtsp_username"><span class="label-text">Username</span></label>
+          <input type="text" id="rtsp_username" name="rtsp_username" value="{{ rtsp_username }}"
+                 class="input input-bordered w-full" autocomplete="off" />
+        </div>
+        <div class="form-control">
+          <label class="label" for="rtsp_password"><span class="label-text">Password</span></label>
+          <input type="password" id="rtsp_password" name="rtsp_password" value="{{ rtsp_password }}"
+                 class="input input-bordered w-full" autocomplete="new-password" />
+        </div>
       </div>
 
       <div class="form-control">
-        <label class="label" for="rtsp_url">
-          <span class="label-text">RTSP URL</span>
-        </label>
-        <input
-          type="text"
-          id="rtsp_url"
-          name="rtsp_url"
-          value="{{ rtsp_url }}"
-          placeholder="rtsp://USER:PASS@192.168.1.100:554/Streaming/Channels/101"
-          class="input input-bordered w-full font-mono text-sm{% if errors.get('rtsp_url') %} input-error{% endif %}"
-          required
-        />
-        {% if errors.get('rtsp_url') %}
+        <label class="label" for="rtsp_path"><span class="label-text">Stream path</span></label>
+        <input type="text" id="rtsp_path" name="rtsp_path" value="{{ rtsp_path }}"
+               placeholder="/Streaming/Channels/101"
+               class="input input-bordered w-full font-mono text-sm{% if errors.get('rtsp_path') %} input-error{% endif %}" />
         <label class="label">
-          <span class="label-text-alt text-error">{{ errors.rtsp_url }}</span>
+          <span class="label-text-alt">Hikvision main <code>101</code>, sub <code>102</code></span>
         </label>
-        {% else %}
-        <label class="label">
-          <span class="label-text-alt">
-            Hikvision main stream is usually channel <code>101</code>; substream is <code>102</code>.
-          </span>
-        </label>
-        {% endif %}
       </div>
 
       <div class="form-control">
-        <label class="label" for="retention_days">
-          <span class="label-text">Retention (days)</span>
-        </label>
-        <input
-          type="number"
-          id="retention_days"
-          name="retention_days"
-          value="{{ retention_days|default(2) }}"
-          min="1"
-          max="365"
-          class="input input-bordered w-full"
-        />
-        <label class="label">
-          <span class="label-text-alt">Footage older than this is deleted automatically.</span>
-        </label>
+        <label class="label" for="retention_days"><span class="label-text">Retention (days)</span></label>
+        <input type="number" id="retention_days" name="retention_days" value="{{ retention_days }}"
+               min="1" max="365" class="input input-bordered w-full" />
       </div>
 
       <div class="card-actions justify-end mt-6">
         <a href="/cameras" class="btn btn-ghost">Cancel</a>
-        <button type="submit" class="btn btn-primary">Save camera</button>
+        <button type="submit" class="btn btn-primary">{{ submit_label }}</button>
       </div>
     </form>
   </div>
