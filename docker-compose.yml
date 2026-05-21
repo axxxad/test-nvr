@@ -1,0 +1,15 @@
+services:
+  nvr:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data
+      - ./recordings:/recordings
+      - ./exports:/app/exports
+    env_file:
+      - .env.example
+    environment:
+      - DATABASE_URL=sqlite:////data/nvr.db
+      - RECORDINGS_DIR=/recordings

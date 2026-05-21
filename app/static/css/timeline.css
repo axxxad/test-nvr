@@ -1,0 +1,255 @@
+.timeline-root {
+  --marker-start: oklch(0.72 0.17 145);
+  --marker-end: oklch(0.65 0.2 25);
+  --marker-play: oklch(0.92 0.04 260);
+  --lane-bg: oklch(0.25 0.02 260);
+}
+
+#preview-video {
+  width: 100%;
+  max-height: 420px;
+  background: #000;
+  border-radius: 0.5rem;
+}
+
+.timeline-lanes {
+  margin: 1rem 0 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  overflow: visible;
+}
+
+.timeline-lane-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: oklch(0.55 0.02 260);
+}
+
+/* Both lanes + full-height playhead */
+.timeline-tracks-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  overflow: visible;
+  padding: 1.75rem 0 0.25rem;
+}
+
+.timeline-lane {
+  position: relative;
+  border-radius: 0.5rem;
+  background: var(--lane-bg);
+  user-select: none;
+  touch-action: none;
+}
+
+.timeline-lane-scrub {
+  height: 3.25rem;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.timeline-lane-export {
+  height: 2rem;
+  cursor: default;
+  z-index: 3;
+}
+
+.timeline-segments {
+  position: absolute;
+  inset: 0.4rem 0;
+  pointer-events: none;
+}
+
+.timeline-seg-block {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: oklch(0.45 0.08 250 / 0.55);
+  border-radius: 2px;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.timeline-seg-block:hover {
+  background: oklch(0.55 0.12 250 / 0.75);
+}
+
+.timeline-range {
+  position: absolute;
+  inset: 0.15rem 0;
+  background: oklch(0.55 0.14 250 / 0.2);
+  border-radius: 0.25rem;
+  pointer-events: none;
+}
+
+/* Playhead: spans BOTH lanes; knob + grab zone on top only */
+.timeline-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  transform: translateX(-50%);
+  z-index: 5;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    var(--marker-play) 0%,
+    var(--marker-play) 42%,
+    oklch(0.92 0.04 260 / 0.35) 42%,
+    oklch(0.92 0.04 260 / 0.35) 100%
+  );
+  border-radius: 2px;
+  box-shadow: 0 0 12px oklch(1 0 0 / 0.35);
+}
+
+.playhead-knob {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -55%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--marker-play);
+  border: 3px solid oklch(0.18 0.02 260);
+  box-shadow: 0 2px 10px oklch(0 0 0 / 0.5);
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.timeline-playhead.dragging .playhead-knob {
+  cursor: grabbing;
+  transform: translate(-50%, -55%) scale(1.1);
+}
+
+/* Grab only the top ~58% (scrub lane) so export row stays easy to use */
+.playhead-hit {
+  position: absolute;
+  top: -0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44px;
+  height: 4.5rem;
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.timeline-playhead.dragging .playhead-hit {
+  cursor: grabbing;
+}
+
+/* Export: small tabs, short stem — clearly shorter than playhead */
+.export-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  transform: translateX(-50%);
+  z-index: 12;
+  cursor: ew-resize;
+  width: 0;
+  pointer-events: auto;
+}
+
+.export-handle-hit {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -12px;
+  width: 24px;
+}
+
+.export-handle-tab {
+  position: absolute;
+  top: -1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 1.75rem;
+  padding: 0.05rem 0.3rem;
+  font-size: 0.55rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  border-radius: 0.2rem;
+  color: oklch(0.15 0.02 260);
+  pointer-events: none;
+}
+
+.export-handle-start .export-handle-tab {
+  background: var(--marker-start);
+}
+
+.export-handle-end .export-handle-tab {
+  background: var(--marker-end);
+}
+
+.export-handle-start::before,
+.export-handle-end::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 1px;
+}
+
+.export-handle-start::before {
+  background: var(--marker-start);
+}
+
+.export-handle-end::before {
+  background: var(--marker-end);
+}
+
+.export-handle.dragging .export-handle-tab {
+  filter: brightness(1.15);
+}
+
+.timeline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: oklch(0.7 0.02 260);
+}
+
+.timeline-legend span::before {
+  content: "";
+  display: inline-block;
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}
+
+.legend-play::before {
+  width: 4px;
+  height: 1.25rem;
+  background: var(--marker-play);
+  border-radius: 1px;
+}
+
+.legend-in::before {
+  width: 0.55rem;
+  height: 0.55rem;
+  background: var(--marker-start);
+  border-radius: 2px;
+}
+
+.legend-out::before {
+  width: 0.55rem;
+  height: 0.55rem;
+  background: var(--marker-end);
+  border-radius: 2px;
+}
+
+.legend-seg::before {
+  width: 0.65rem;
+  height: 0.65rem;
+  background: oklch(0.45 0.08 250 / 0.8);
+  border-radius: 2px;
+}

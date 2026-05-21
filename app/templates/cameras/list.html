@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Cameras — CCTV NVR{% endblock %}
+
+{% block navbar_actions %}
+<a href="/cameras/new" class="btn btn-primary">Add camera</a>
+{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold">Cameras</h1>
+</div>
+
+{% if cameras %}
+<div class="card bg-base-100 shadow">
+  <div class="card-body p-0">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Recording</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for camera in cameras %}
+        {% set rec = recording[camera.id] %}
+        <tr>
+          <td class="font-medium">{{ camera.name }}</td>
+          <td>
+            {% if rec.active %}
+            <span class="badge badge-success gap-2">
+              <span class="inline-block w-2 h-2 rounded-full bg-success-content animate-pulse"></span>
+              Recording
+            </span>
+            {% elif rec.enabled %}
+            <span class="badge badge-warning">Enabled (not running)</span>
+            {% else %}
+            <span class="badge badge-ghost">Off</span>
+            {% endif %}
+          </td>
+          <td class="text-right">
+            <div class="flex justify-end gap-1 flex-wrap">
+              <a href="/cameras/{{ camera.id }}/recordings" class="btn btn-ghost btn-sm">Browse</a>
+              {% if rec.enabled %}
+              <form method="post" action="/cameras/{{ camera.id }}/recording/disable" class="inline">
+                <button type="submit" class="btn btn-outline btn-sm">Stop recording</button>
+              </form>
+              {% else %}
+              <form method="post" action="/cameras/{{ camera.id }}/recording/enable" class="inline">
+                <button type="submit" class="btn btn-primary btn-sm">Start recording</button>
+              </form>
+              {% endif %}
+              <form method="post" action="/cameras/{{ camera.id }}/delete" class="inline"
+                    onsubmit="return confirm('Remove {{ camera.name }}?');">
+                <button type="submit" class="btn btn-ghost btn-sm text-error">Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card bg-base-100 shadow">
+  <div class="card-body items-center text-center py-12">
+    <h2 class="card-title">No cameras yet</h2>
+    <p class="text-base-content/70">Add your first Hikvision camera to get started.</p>
+    <div class="card-actions mt-4">
+      <a href="/cameras/new" class="btn btn-primary">Add camera</a>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

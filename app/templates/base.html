@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}CCTV NVR{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="min-h-screen bg-base-200">
+  <div class="navbar bg-base-100 shadow-md">
+    <div class="flex-1">
+      <a href="/cameras" class="btn btn-ghost text-xl">CCTV NVR</a>
+    </div>
+    <div class="flex-none">
+      {% block navbar_actions %}{% endblock %}
+    </div>
+  </div>
+
+  <main class="container mx-auto {% block main_class %}max-w-4xl{% endblock %} p-6">
+    {% if flash %}
+    <div role="alert" class="alert alert-success mb-6">
+      <span>{{ flash }}</span>
+    </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
