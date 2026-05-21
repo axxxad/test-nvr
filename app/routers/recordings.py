@@ -83,7 +83,7 @@ def _range_presets(
 
     yesterday_date = current.date() - timedelta(days=1)
     y_from = datetime.combine(yesterday_date, time.min, tzinfo=get_tz())
-    y_to = datetime.combine(yesterday_date, time(23, 59, 59), tzinfo=get_tz()))
+    y_to = datetime.combine(yesterday_date, time(23, 59, 59), tzinfo=get_tz())
 
     last24_from = current - timedelta(hours=24)
 
