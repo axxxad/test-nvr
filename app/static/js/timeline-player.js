@@ -51,21 +51,34 @@
     const d = new Date(ms);
     const pad = (n) => String(n).padStart(2, "0");
     return (
-      d.getUTCFullYear() +
+      d.getFullYear() +
       "-" +
-      pad(d.getUTCMonth() + 1) +
+      pad(d.getMonth() + 1) +
       "-" +
-      pad(d.getUTCDate()) +
+      pad(d.getDate()) +
       "T" +
-      pad(d.getUTCHours()) +
+      pad(d.getHours()) +
       ":" +
-      pad(d.getUTCMinutes())
+      pad(d.getMinutes())
     );
   }
 
   function formatClock(ms) {
     const d = new Date(ms);
-    return d.toISOString().replace("T", " ").slice(0, 19) + " UTC";
+    const pad = (n) => String(n).padStart(2, "0");
+    return (
+      d.getFullYear() +
+      "-" +
+      pad(d.getMonth() + 1) +
+      "-" +
+      pad(d.getDate()) +
+      " " +
+      pad(d.getHours()) +
+      ":" +
+      pad(d.getMinutes()) +
+      ":" +
+      pad(d.getSeconds())
+    );
   }
 
   function pct(ms) {

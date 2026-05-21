@@ -1,12 +1,13 @@
 import logging
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models.segment import Segment
+from app.timezone_util import parse_filename_timestamp
 
 logger = logging.getLogger(__name__)
 
@@ -21,16 +22,35 @@ def parse_segment_relative_path(relative: str) -> tuple[int, datetime] | None:
     if not match:
         return None
     camera_id = int(match.group("camera_id"))
-    start = datetime(
+    start = parse_filename_timestamp(
         int(match.group("year")),
         int(match.group("month")),
         int(match.group("day")),
         int(match.group("hour")),
         int(match.group("minute")),
         int(match.group("second")),
-        tzinfo=timezone.utc,
     )
     return camera_id, start
+
+
+def refresh_segment_times_from_paths(db: Session) -> int:
+    """Re-derive start/end from filenames (fixes timezone after APP_TIMEZONE change)."""
+    segment_duration = timedelta(seconds=settings.segment_duration_seconds)
+    updated = 0
+    for segment in db.query(Segment).all():
+        parsed = parse_segment_relative_path(segment.file_path)
+        if parsed is None:
+            continue
+        _, start_time = parsed
+        end_time = start_time + segment_duration
+        if segment.start_time != start_time or segment.end_time != end_time:
+            segment.start_time = start_time
+            segment.end_time = end_time
+            updated += 1
+    if updated:
+        db.commit()
+        logger.info("Refreshed segment times for %s row(s)", updated)
+    return updated
 
 
 def index_recordings(db: Session) -> int:
@@ -81,6 +101,8 @@ def index_recordings(db: Session) -> int:
     if added:
         db.commit()
         logger.info("Indexed %s new segment(s)", added)
+
+    refresh_segment_times_from_paths(db)
     return added
 
 

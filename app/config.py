@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     retention_interval_seconds: int = 300
     default_retention_days: int = 2
     secret_key: str = "dev-secret-change-me"
+    # Must match container TZ so FFmpeg segment filenames match the indexer.
+    app_timezone: str = "UTC"
 
 
 settings = Settings()

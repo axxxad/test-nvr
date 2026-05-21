@@ -4,7 +4,7 @@
 {% block main_class %}max-w-6xl{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/timeline.css?v=3">
+<link rel="stylesheet" href="/static/css/timeline.css?v=4">
 {% endblock %}
 
 {% block content %}
@@ -32,7 +32,7 @@
   <div class="card-body">
     <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
       <h2 class="card-title text-lg mb-0">Time range</h2>
-      <span class="text-xs text-base-content/60">End defaults to {{ to_hint }}</span>
+      <span class="text-xs text-base-content/60">Times: {{ tz_label }} · End: {{ to_hint }}</span>
     </div>
 
     <div class="flex flex-wrap gap-2 mb-4">
@@ -161,8 +161,8 @@
     <table class="table table-sm">
       <thead>
         <tr>
-          <th>Start (UTC)</th>
-          <th>End (UTC)</th>
+          <th>Start ({{ tz_label }})</th>
+          <th>End ({{ tz_label }})</th>
           <th class="text-right">Size</th>
         </tr>
       </thead>
@@ -202,6 +202,6 @@
 
 {% block extra_js %}
 {% if segments %}
-<script src="/static/js/timeline-player.js?v=3"></script>
+<script src="/static/js/timeline-player.js?v=4"></script>
 {% endif %}
 {% endblock %}

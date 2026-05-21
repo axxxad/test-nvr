@@ -1,7 +1,8 @@
 import logging
 import subprocess
-from datetime import datetime, timezone
 from pathlib import Path
+
+from app.timezone_util import now
 
 logger = logging.getLogger(__name__)
 
@@ -9,8 +10,13 @@ logger = logging.getLogger(__name__)
 def _segment_output_pattern(output_dir: Path) -> str:
     """Ensure today's folder exists in Python, then let FFmpeg write segments there."""
     output_dir.mkdir(parents=True, exist_ok=True)
-    now = datetime.now(timezone.utc)
-    day_dir = output_dir / now.strftime("%Y") / now.strftime("%m") / now.strftime("%d")
+    local_now = now()
+    day_dir = (
+        output_dir
+        / local_now.strftime("%Y")
+        / local_now.strftime("%m")
+        / local_now.strftime("%d")
+    )
     day_dir.mkdir(parents=True, exist_ok=True)
     return str(output_dir / "%Y" / "%m" / "%d" / "%H-%M-%S.mp4")
 

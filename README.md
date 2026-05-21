@@ -73,8 +73,12 @@ ffmpeg -f concat -safe 0 -i list.txt -c copy output.mp4
 |----------|-----------------|--------|
 | `DATABASE_URL` | `sqlite:///./data/nvr.db` | `sqlite:////data/nvr.db` |
 | `RECORDINGS_DIR` | `./recordings` | `/recordings` |
+| `APP_TIMEZONE` | `UTC` | `Europe/London` |
+| `TZ` | — | **same as** `APP_TIMEZONE` (FFmpeg segment folders) |
 
-Copy `.env.example` to `.env` to override.
+Set `TZ` and `APP_TIMEZONE` to your camera/PC timezone (IANA name). If they differ from Docker’s default UTC, segment folders and the UI were off by 1–2 hours (worse after daylight saving).
+
+Copy `.env.example` to `.env` and adjust the zone. After changing it, redeploy and open Recordings once (segment times are refreshed from filenames).
 
 ## Roadmap
 

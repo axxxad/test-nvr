@@ -13,6 +13,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
+from app.timezone_util import tz_label
 from app.database import Base, SessionLocal, engine
 from app.db_migrate import migrate_schema
 from app.models import Camera, Segment  # noqa: F401 — register models
@@ -33,6 +34,7 @@ async def lifespan(app: FastAPI):
     settings.exports_dir.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
     migrate_schema()
+    logging.getLogger(__name__).info("App timezone: %s", tz_label())
 
     db = SessionLocal()
     try:

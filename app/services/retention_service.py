@@ -1,23 +1,24 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models.camera import Camera
 from app.models.segment import Segment
+from app.timezone_util import now
 
 logger = logging.getLogger(__name__)
 
 
 def run_retention_cleanup(db: Session) -> int:
     """Delete segment files and DB rows older than each camera's retention_days."""
-    now = datetime.now(timezone.utc)
+    current = now()
     deleted = 0
 
     cameras = db.query(Camera).all()
     for camera in cameras:
-        cutoff = now - timedelta(days=camera.retention_days)
+        cutoff = current - timedelta(days=camera.retention_days)
         old_segments = (
             db.query(Segment)
             .filter(Segment.camera_id == camera.id, Segment.end_time < cutoff)

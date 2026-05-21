@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta, time, timezone
+from datetime import datetime, time, timedelta
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -21,35 +21,19 @@ from app.services.segment_service import (
     get_latest_segment_end,
     list_segments_for_range,
 )
+from app.timezone_util import (
+    format_form_local,
+    get_tz,
+    now,
+    parse_form_local,
+    start_of_day,
+    tz_label,
+)
 
 router = APIRouter(prefix="/cameras", tags=["recordings"])
 templates = Jinja2Templates(
     directory=str(Path(__file__).resolve().parent.parent / "templates")
 )
-
-
-def _parse_datetime_local(value: str) -> datetime | None:
-    value = value.strip()
-    if not value:
-        return None
-    try:
-        dt = datetime.fromisoformat(value)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt
-    except ValueError:
-        return None
-
-
-def _to_datetime_local_value(dt: datetime) -> str:
-    if dt.tzinfo is not None:
-        dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
-    return dt.strftime("%Y-%m-%dT%H:%M")
-
-
-def _start_of_day(dt: datetime) -> datetime:
-    d = dt.astimezone(timezone.utc)
-    return datetime.combine(d.date(), time.min, tzinfo=timezone.utc)
 
 
 def _default_range_for_camera(
@@ -59,23 +43,23 @@ def _default_range_for_camera(
     recording_active: bool,
 ) -> tuple[str, str, str]:
     """Returns (from_val, to_val, hint describing the to default)."""
-    now = datetime.now(timezone.utc)
+    current = now()
     latest_end = get_latest_segment_end(db, camera_id)
 
     if recording_active:
-        to_dt = now
+        to_dt = current
         to_hint = "now (recording)"
     elif latest_end is not None:
         to_dt = latest_end
-        to_hint = f"latest recording ({latest_end.strftime('%H:%M')} UTC)"
+        to_hint = f"latest recording ({format_form_local(latest_end).split('T', 1)[1]})"
     else:
-        to_dt = now
+        to_dt = current
         to_hint = "now"
 
-    from_dt = _start_of_day(to_dt)
+    from_dt = start_of_day(to_dt)
     return (
-        _to_datetime_local_value(from_dt),
-        _to_datetime_local_value(to_dt),
+        format_form_local(from_dt),
+        format_form_local(to_dt),
         to_hint,
     )
 
@@ -86,25 +70,25 @@ def _range_presets(
     *,
     recording_active: bool,
 ) -> dict[str, tuple[str, str, str]]:
-    now = datetime.now(timezone.utc)
+    current = now()
     latest_end = get_latest_segment_end(db, camera_id)
 
     def to_dt() -> datetime:
         if recording_active:
-            return now
-        return latest_end or now
+            return current
+        return latest_end or current
 
     today_to = to_dt()
-    today_from = _start_of_day(today_to)
+    today_from = start_of_day(today_to)
 
-    yesterday = now.date() - timedelta(days=1)
-    y_from = datetime.combine(yesterday, time.min, tzinfo=timezone.utc)
-    y_to = datetime.combine(yesterday, time(23, 59, 59), tzinfo=timezone.utc)
+    yesterday_date = current.date() - timedelta(days=1)
+    y_from = datetime.combine(yesterday_date, time.min, tzinfo=get_tz())
+    y_to = datetime.combine(yesterday_date, time(23, 59, 59), tzinfo=get_tz()))
 
-    last24_from = now - timedelta(hours=24)
+    last24_from = current - timedelta(hours=24)
 
     def pack(start: datetime, end: datetime) -> tuple[str, str]:
-        return _to_datetime_local_value(start), _to_datetime_local_value(end)
+        return format_form_local(start), format_form_local(end)
 
     return {
         "today": pack(today_from, today_to),
@@ -174,8 +158,8 @@ def browse_recordings(
     flash = request.query_params.get("flash")
 
     segments: list[Segment] = []
-    start_dt = _parse_datetime_local(from_val)
-    end_dt = _parse_datetime_local(to_val)
+    start_dt = parse_form_local(from_val)
+    end_dt = parse_form_local(to_val)
 
     if start_dt and end_dt:
         if end_dt <= start_dt:
@@ -206,6 +190,7 @@ def browse_recordings(
             "to_hint": to_hint,
             "preset_links": preset_links,
             "active_preset": active_preset,
+            "tz_label": tz_label(),
         },
     )
 
@@ -234,8 +219,8 @@ def export_recording(
     if camera is None:
         return RedirectResponse(url="/cameras", status_code=status.HTTP_303_SEE_OTHER)
 
-    start_dt = _parse_datetime_local(from_time)
-    end_dt = _parse_datetime_local(to_time)
+    start_dt = parse_form_local(from_time)
+    end_dt = parse_form_local(to_time)
     query = f"from={from_time}&to={to_time}"
 
     if not start_dt or not end_dt:
