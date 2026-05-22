@@ -48,10 +48,12 @@
               <a href="/cameras/{{ camera.id }}/recordings" class="btn btn-ghost btn-sm">Browse</a>
               {% if rec.enabled %}
               <form method="post" action="/cameras/{{ camera.id }}/recording/disable" class="inline">
+                <input type="hidden" name="next" value="/cameras" />
                 <button type="submit" class="btn btn-outline btn-sm">Stop</button>
               </form>
               {% else %}
               <form method="post" action="/cameras/{{ camera.id }}/recording/enable" class="inline">
+                <input type="hidden" name="next" value="/cameras" />
                 <button type="submit" class="btn btn-primary btn-sm">Record</button>
               </form>
               {% endif %}

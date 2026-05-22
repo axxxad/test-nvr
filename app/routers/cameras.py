@@ -69,6 +69,14 @@ def _recording_states(cameras) -> dict[int, dict[str, bool]]:
     }
 
 
+def _recording_redirect(camera_id: int, next_url: str | None, flash_message: str) -> RedirectResponse:
+    if next_url == "/cameras":
+        url = f"/cameras?flash={flash_message.replace(' ', '+')}"
+    else:
+        url = f"/cameras/{camera_id}?flash={flash_message.replace(' ', '+')}"
+    return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
+
+
 @router.get("", response_class=HTMLResponse)
 def list_cameras(request: Request, db: Session = Depends(get_db)):
     flash = request.query_params.get("flash")
@@ -292,29 +300,31 @@ def live_preview_stream(camera_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{camera_id}/recording/enable")
-def recording_enable(camera_id: int, db: Session = Depends(get_db)):
+def recording_enable(
+    camera_id: int,
+    next_url: str | None = Form(None, alias="next"),
+    db: Session = Depends(get_db),
+):
     camera = camera_service.get_camera(db, camera_id)
     if camera is None:
         return RedirectResponse(url="/cameras", status_code=status.HTTP_303_SEE_OTHER)
 
     enable_recording(db, camera)
-    return RedirectResponse(
-        url=f"/cameras/{camera_id}?flash=Recording+started",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
+    return _recording_redirect(camera_id, next_url, "Recording started")
 
 
 @router.post("/{camera_id}/recording/disable")
-def recording_disable(camera_id: int, db: Session = Depends(get_db)):
+def recording_disable(
+    camera_id: int,
+    next_url: str | None = Form(None, alias="next"),
+    db: Session = Depends(get_db),
+):
     camera = camera_service.get_camera(db, camera_id)
     if camera is None:
         return RedirectResponse(url="/cameras", status_code=status.HTTP_303_SEE_OTHER)
 
     disable_recording(db, camera)
-    return RedirectResponse(
-        url=f"/cameras/{camera_id}?flash=Recording+stopped",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
+    return _recording_redirect(camera_id, next_url, "Recording stopped")
 
 
 @router.post("/{camera_id}/delete")
