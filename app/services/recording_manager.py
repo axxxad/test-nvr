@@ -1,5 +1,6 @@
 import logging
 import subprocess
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from app.timezone_util import now
@@ -7,17 +8,31 @@ from app.timezone_util import now
 logger = logging.getLogger(__name__)
 
 
-def _segment_output_pattern(output_dir: Path) -> str:
-    """Ensure today's folder exists in Python, then let FFmpeg write segments there."""
+def segment_day_dir(output_dir: Path, dt: datetime) -> Path:
+    return (
+        output_dir
+        / dt.strftime("%Y")
+        / dt.strftime("%m")
+        / dt.strftime("%d")
+    )
+
+
+def ensure_segment_day_dirs(output_dir: Path) -> None:
+    """Create today and tomorrow segment folders in app timezone.
+
+    FFmpeg -strftime_mkdir often fails at midnight on Windows/SMB mounts;
+    pre-creating paths avoids the segment muxer exiting when the date rolls.
+    """
     output_dir.mkdir(parents=True, exist_ok=True)
     local_now = now()
-    day_dir = (
-        output_dir
-        / local_now.strftime("%Y")
-        / local_now.strftime("%m")
-        / local_now.strftime("%d")
+    segment_day_dir(output_dir, local_now).mkdir(parents=True, exist_ok=True)
+    segment_day_dir(output_dir, local_now + timedelta(days=1)).mkdir(
+        parents=True, exist_ok=True
     )
-    day_dir.mkdir(parents=True, exist_ok=True)
+
+
+def _segment_output_pattern(output_dir: Path) -> str:
+    ensure_segment_day_dirs(output_dir)
     return str(output_dir / "%Y" / "%m" / "%d" / "%H-%M-%S.mp4")
 
 

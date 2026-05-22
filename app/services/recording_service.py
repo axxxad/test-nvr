@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.models.camera import Camera
 from app.rtsp import rtsp_url_for_ffmpeg
-from app.services.recording_manager import recording_manager
+from app.services.recording_manager import ensure_segment_day_dirs, recording_manager
 
 logger = logging.getLogger(__name__)
 
@@ -46,12 +46,20 @@ def disable_recording(db: Session, camera: Camera) -> None:
 
 
 def restore_enabled_recordings(db: Session) -> None:
+    maintain_enabled_recordings(db)
+
+
+def maintain_enabled_recordings(db: Session) -> None:
+    """Keep day folders ready and restart FFmpeg if it died while still enabled."""
     cameras = db.query(Camera).filter(Camera.recording_enabled.is_(True)).all()
     for camera in cameras:
         try:
-            start_recording(camera)
+            ensure_segment_day_dirs(camera_recordings_dir(camera.id))
+            if not is_recording(camera.id):
+                logger.info("Restarting recording for camera %s", camera.id)
+                start_recording(camera)
         except Exception:
-            logger.exception("Failed to restore recording for camera %s", camera.id)
+            logger.exception("Failed to maintain recording for camera %s", camera.id)
 
 
 def stop_before_delete(camera_id: int) -> None:

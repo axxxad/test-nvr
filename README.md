@@ -59,7 +59,7 @@ ffmpeg -rtsp_transport tcp -i RTSP_URL \
   /recordings/cam{id}/%Y/%m/%d/%H-%M-%S.mp4
 ```
 
-Today's `YYYY/MM/DD` folder is also created in Python before FFmpeg starts (works reliably on Windows mounts).
+Today's and tomorrow's `YYYY/MM/DD` folders are created in Python before FFmpeg starts and refreshed every index cycle (60s). FFmpeg `-strftime_mkdir` is unreliable at midnight on some mounts; a dead FFmpeg process is also restarted while recording stays enabled.
 
 ## Export command
 

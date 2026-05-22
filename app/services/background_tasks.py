@@ -3,6 +3,7 @@ import logging
 
 from app.config import settings
 from app.database import SessionLocal
+from app.services.recording_service import maintain_enabled_recordings
 from app.services.retention_service import run_retention_cleanup
 from app.services.segment_indexer import index_recordings, prune_missing_files
 
@@ -12,6 +13,7 @@ logger = logging.getLogger(__name__)
 def run_index_cycle() -> None:
     db = SessionLocal()
     try:
+        maintain_enabled_recordings(db)
         index_recordings(db)
         prune_missing_files(db)
     except Exception:
