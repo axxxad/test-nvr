@@ -24,8 +24,17 @@ def _backfill_camera_sort_order() -> None:
         conn.commit()
 
 
+def _drop_segments_table_if_present() -> None:
+    with engine.connect() as conn:
+        tables = set(inspect(engine).get_table_names())
+        if "segments" in tables:
+            conn.execute(text("DROP TABLE segments"))
+            conn.commit()
+
+
 def migrate_schema() -> None:
     """Add columns introduced after initial deploy (SQLite has no auto-migrate)."""
+    _drop_segments_table_if_present()
     _add_column_if_missing(
         "cameras",
         "recording_enabled",

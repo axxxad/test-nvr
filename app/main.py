@@ -16,9 +16,14 @@ from app.config import settings
 from app.timezone_util import tz_label
 from app.database import Base, SessionLocal, engine
 from app.db_migrate import migrate_schema
-from app.models import Camera, Segment  # noqa: F401 — register models
+from app.models import Camera  # noqa: F401 — register models
 from app.routers import cameras, recordings
-from app.services.background_tasks import index_loop, retention_loop, run_index_cycle, run_retention_cycle
+from app.services.background_tasks import (
+    recording_maintenance_loop,
+    retention_loop,
+    run_recording_maintenance_cycle,
+    run_retention_cycle,
+)
 from app.services.recording_manager import recording_manager
 from app.services.recording_service import restore_enabled_recordings
 
@@ -39,19 +44,19 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         restore_enabled_recordings(db)
-        run_index_cycle()
+        run_recording_maintenance_cycle()
         run_retention_cycle()
     finally:
         db.close()
 
     stop_event = asyncio.Event()
-    index_task = asyncio.create_task(index_loop(stop_event))
+    maintenance_task = asyncio.create_task(recording_maintenance_loop(stop_event))
     retention_task = asyncio.create_task(retention_loop(stop_event))
 
     yield
 
     stop_event.set()
-    await asyncio.gather(index_task, retention_task, return_exceptions=True)
+    await asyncio.gather(maintenance_task, retention_task, return_exceptions=True)
     recording_manager.stop_all()
 
 

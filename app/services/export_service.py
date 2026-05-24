@@ -4,11 +4,8 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from sqlalchemy.orm import Session
-
 from app.config import settings
-from app.models.segment import Segment
-from app.services.segment_service import list_segments_for_range
+from app.services.segment_service import SegmentInfo, list_segments_for_range
 from app.timezone_util import ensure_aware
 
 logger = logging.getLogger(__name__)
@@ -19,7 +16,7 @@ class ExportError(Exception):
 
 
 def _trim_for_range(
-    segment: Segment,
+    segment: SegmentInfo,
     range_start: datetime,
     range_end: datetime,
 ) -> tuple[float, float] | None:
@@ -71,14 +68,13 @@ def _extract_part(
 
 
 def export_clip(
-    db: Session,
     camera_id: int,
     start: datetime,
     end: datetime,
 ) -> Path:
     start = ensure_aware(start)
     end = ensure_aware(end)
-    segments = list_segments_for_range(db, camera_id, start, end)
+    segments = list_segments_for_range(camera_id, start, end)
     if not segments:
         raise ExportError("No recordings found for the selected time range.")
 

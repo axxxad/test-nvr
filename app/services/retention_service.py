@@ -5,23 +5,24 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models.camera import Camera
-from app.models.segment import Segment
 from app.services.disk_service import recordings_volume_free_bytes
+from app.services.recording_service import maintain_enabled_recordings
+from app.services.segment_service import SegmentInfo, iter_all_segments, iter_segments_for_camera
 from app.timezone_util import ensure_aware, now
 
 logger = logging.getLogger(__name__)
 
 
 def retention_cutoff(retention_days: int) -> datetime:
-    """Segments with end_time before this instant are outside the retention window."""
+    """Clips with end_time before this instant are outside the retention window."""
     return now() - timedelta(days=retention_days)
 
 
-def _segment_expired(segment: Segment, cutoff: datetime) -> bool:
+def _segment_expired(segment: SegmentInfo, cutoff: datetime) -> bool:
     return ensure_aware(segment.end_time) < cutoff
 
 
-def _delete_segment_files(segments: list[Segment]) -> int:
+def _delete_segment_files(segments: list[SegmentInfo]) -> int:
     deleted_files = 0
     for segment in segments:
         path = settings.recordings_dir / segment.file_path
@@ -34,17 +35,8 @@ def _delete_segment_files(segments: list[Segment]) -> int:
     return deleted_files
 
 
-def _delete_segments(db: Session, segments: list[Segment]) -> int:
-    if not segments:
-        return 0
-    deleted_files = _delete_segment_files(segments)
-    for segment in segments:
-        db.delete(segment)
-    return deleted_files
-
-
 def run_retention_cleanup(db: Session, *, camera_id: int | None = None) -> int:
-    """Delete segment files and DB rows older than each camera's retention_days."""
+    """Delete clip files older than each camera's retention_days."""
     deleted = 0
     cameras = db.query(Camera).all()
     if camera_id is not None:
@@ -52,13 +44,13 @@ def run_retention_cleanup(db: Session, *, camera_id: int | None = None) -> int:
 
     for camera in cameras:
         cutoff = retention_cutoff(camera.retention_days)
-        segments = db.query(Segment).filter(Segment.camera_id == camera.id).all()
+        segments = iter_segments_for_camera(camera.id)
         expired = [segment for segment in segments if _segment_expired(segment, cutoff)]
         if not expired:
             continue
-        deleted += _delete_segments(db, expired)
+        deleted += _delete_segment_files(expired)
         logger.info(
-            "Retention removed %s segment(s) for camera %s (retention_days=%s, cutoff=%s)",
+            "Retention removed %s clip(s) for camera %s (retention_days=%s, cutoff=%s)",
             len(expired),
             camera.id,
             camera.retention_days,
@@ -66,13 +58,12 @@ def run_retention_cleanup(db: Session, *, camera_id: int | None = None) -> int:
         )
 
     if deleted:
-        db.commit()
         logger.info("Retention cleanup removed %s file(s)", deleted)
     return deleted
 
 
 def run_disk_pressure_cleanup(db: Session) -> int:
-    """Delete oldest segments when free space on the recordings volume is below minimum."""
+    """Delete oldest clips when free space on the recordings volume is below minimum."""
     if not settings.disk_pressure_enabled:
         return 0
 
@@ -82,25 +73,23 @@ def run_disk_pressure_cleanup(db: Session) -> int:
 
     deleted = 0
     while free < settings.disk_target_free_bytes:
-        batch = (
-            db.query(Segment)
-            .order_by(Segment.end_time.asc())
-            .limit(settings.disk_pressure_batch_size)
-            .all()
+        all_segments = sorted(
+            iter_all_segments(),
+            key=lambda s: ensure_aware(s.end_time),
         )
+        batch = all_segments[: settings.disk_pressure_batch_size]
         if not batch:
             logger.warning(
-                "Disk pressure: no segments left to delete (free=%s bytes, min=%s bytes)",
+                "Disk pressure: no clips left to delete (free=%s bytes, min=%s bytes)",
                 free,
                 settings.disk_min_free_bytes,
             )
             break
 
-        deleted += _delete_segments(db, batch)
-        db.commit()
+        deleted += _delete_segment_files(batch)
         free = recordings_volume_free_bytes()
         logger.info(
-            "Disk pressure removed %s segment(s); free space now %s bytes",
+            "Disk pressure removed %s clip(s); free space now %s bytes",
             len(batch),
             free,
         )
@@ -115,7 +104,5 @@ def apply_retention_policy(db: Session, *, camera_id: int | None = None) -> tupl
     age_deleted = run_retention_cleanup(db, camera_id=camera_id)
     disk_deleted = run_disk_pressure_cleanup(db)
     if disk_deleted:
-        from app.services.recording_service import maintain_enabled_recordings
-
         maintain_enabled_recordings(db)
     return age_deleted, disk_deleted

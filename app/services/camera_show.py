@@ -1,11 +1,11 @@
 import json
 from datetime import datetime, time, timedelta
+from urllib.parse import quote, urlencode
 
 from fastapi import Request
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models.segment import Segment
 from app.rtsp import mask_rtsp_url, parse_rtsp_url
 from app.services import camera_service
 from app.services.disk_service import (
@@ -14,7 +14,11 @@ from app.services.disk_service import (
     recordings_disk_usage,
 )
 from app.services.recording_service import is_recording
-from app.services.segment_service import get_latest_segment_end, list_segments_for_range
+from app.services.segment_service import (
+    SegmentInfo,
+    get_latest_segment_end,
+    list_segments_for_range,
+)
 from app.timezone_util import (
     format_form_local,
     get_tz,
@@ -48,13 +52,12 @@ def connection_context(camera) -> tuple[dict | None, str]:
 
 
 def _default_range_for_camera(
-    db: Session,
     camera_id: int,
     *,
     recording_active: bool,
 ) -> tuple[str, str, str]:
     current = now()
-    latest_end = get_latest_segment_end(db, camera_id)
+    latest_end = get_latest_segment_end(camera_id)
 
     if recording_active:
         to_dt = current
@@ -75,13 +78,12 @@ def _default_range_for_camera(
 
 
 def _range_presets(
-    db: Session,
     camera_id: int,
     *,
     recording_active: bool,
 ) -> dict[str, tuple[str, str, str]]:
     current = now()
-    latest_end = get_latest_segment_end(db, camera_id)
+    latest_end = get_latest_segment_end(camera_id)
 
     def to_dt() -> datetime:
         if recording_active:
@@ -108,18 +110,20 @@ def _range_presets(
 
 
 def _preset_url(camera_id: int, from_val: str, to_val: str) -> str:
-    from urllib.parse import urlencode
-
     return f"/cameras/{camera_id}?{urlencode({'tab': 'recordings', 'from': from_val, 'to': to_val})}"
 
 
-def _segments_json(segments: list[Segment], camera_id: int) -> str:
+def _segments_json(segments: list[SegmentInfo], camera_id: int) -> str:
     payload = [
         {
             "id": seg.id,
+            "path": seg.file_path,
             "start": seg.start_time.isoformat(),
             "end": seg.end_time.isoformat(),
-            "url": f"/cameras/{camera_id}/segments/{seg.id}/play",
+            "url": (
+                f"/cameras/{camera_id}/recordings/play"
+                f"?path={quote(seg.file_path, safe='')}"
+            ),
         }
         for seg in segments
     ]
@@ -133,7 +137,7 @@ def build_recordings_tab_context(
 ) -> dict:
     recording_active = is_recording(camera_id)
     default_from, default_to, to_hint = _default_range_for_camera(
-        db, camera_id, recording_active=recording_active
+        camera_id, recording_active=recording_active
     )
     has_range_query = "from" in request.query_params or "to" in request.query_params
     from_val = request.query_params.get("from", default_from)
@@ -141,7 +145,7 @@ def build_recordings_tab_context(
     if not has_range_query:
         from_val, to_val = default_from, default_to
 
-    presets = _range_presets(db, camera_id, recording_active=recording_active)
+    presets = _range_presets(camera_id, recording_active=recording_active)
     preset_links = {key: _preset_url(camera_id, p[0], p[1]) for key, p in presets.items()}
     active_preset = next(
         (key for key, p in presets.items() if from_val == p[0] and to_val == p[1]),
@@ -150,7 +154,7 @@ def build_recordings_tab_context(
 
     recordings_error = request.query_params.get("error")
 
-    segments: list[Segment] = []
+    segments: list[SegmentInfo] = []
     start_dt = parse_form_local(from_val)
     end_dt = parse_form_local(to_val)
 
@@ -158,7 +162,7 @@ def build_recordings_tab_context(
         if end_dt <= start_dt:
             recordings_error = recordings_error or "End time must be after start time."
         else:
-            segments = list_segments_for_range(db, camera_id, start_dt, end_dt)
+            segments = list_segments_for_range(camera_id, start_dt, end_dt)
 
     range_start_iso = segments[0].start_time.isoformat() if segments else ""
     range_end_iso = segments[-1].end_time.isoformat() if segments else ""

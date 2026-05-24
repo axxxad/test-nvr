@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, DateTime, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
 
@@ -27,4 +27,3 @@ class Camera(Base):
         nullable=False,
     )
 
-    segments = relationship("Segment", back_populates="camera", cascade="all, delete-orphan")

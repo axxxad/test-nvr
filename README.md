@@ -43,10 +43,9 @@ Usually the container is **not running** (for example after Ctrl+C in the termin
 |---------|-------------|
 | Camera CRUD | Name + RTSP URL |
 | Recording | Per-camera FFmpeg segment recording (30s, copy codec) |
-| Indexer | Background scan → SQLite `segments` table (every 60s, recent days only) |
-| Retention | Per-camera days; auto-delete old files (every 5 min); enforced immediately when you lower retention |
-| Disk pressure | When free space is low, delete oldest segments until target free space (see env) |
-| Browse | Date/time range → list segments |
+| Retention | Per-camera days; auto-delete old clip files (every 5 min); enforced immediately when you lower retention |
+| Disk pressure | When free space is low, delete oldest clips until target free space (see env) |
+| Browse | Date/time range → list clips from disk (`cam{id}/YYYY/MM/DD/*.mp4`) |
 | Export | FFmpeg concat → single MP4 download |
 
 ## Local development
@@ -81,7 +80,7 @@ ffmpeg -rtsp_transport tcp -i RTSP_URL \
   /recordings/cam{id}/%Y/%m/%d/%H-%M-%S.mp4
 ```
 
-Today's and tomorrow's `YYYY/MM/DD` folders are created in Python before FFmpeg starts and refreshed every index cycle (60s). FFmpeg `-strftime_mkdir` is unreliable at midnight on some mounts; a dead FFmpeg process is also restarted while recording stays enabled.
+Today's and tomorrow's `YYYY/MM/DD` folders are created in Python before FFmpeg starts and refreshed every maintenance cycle (60s). FFmpeg `-strftime_mkdir` is unreliable at midnight on some mounts; a dead FFmpeg process is also restarted while recording stays enabled.
 
 ## Export command
 
@@ -98,14 +97,13 @@ ffmpeg -f concat -safe 0 -i list.txt -c copy output.mp4
 | `APP_TIMEZONE` | `UTC` | `Europe/London` |
 | `TZ` | — | **same as** `APP_TIMEZONE` (FFmpeg segment folders) |
 | `DISK_PRESSURE_ENABLED` | `true` | `true` |
-| `DISK_MIN_FREE_GB` | `5` | `5` — start deleting oldest segments below this free space |
+| `DISK_MIN_FREE_GB` | `5` | `5` — start deleting oldest clips below this free space |
 | `DISK_TARGET_FREE_GB` | `10` | `10` — stop disk-pressure purge once this much is free |
-| `INDEX_SCAN_DAYS` | `3` | Days of segment folders to scan each index cycle |
-| `PRUNE_BATCH_SIZE` | `2000` | Orphan DB rows checked per retention cycle (batched) |
+| `RECORDING_MAINTENANCE_INTERVAL_SECONDS` | `60` | Ensure day folders exist and restart dead FFmpeg recorders |
 
 Set `TZ` and `APP_TIMEZONE` to your camera/PC timezone (IANA name). If they differ from Docker’s default UTC, segment folders and the UI were off by 1–2 hours (worse after daylight saving).
 
-Copy `.env.example` to `.env` and adjust the zone. After changing `APP_TIMEZONE`, call `refresh_segment_times_from_paths` once (or re-index) so segment times match filenames.
+Copy `.env.example` to `.env` and adjust the zone. Clip times in the UI are derived from filenames on disk (no separate index table).
 
 ## Roadmap
 

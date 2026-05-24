@@ -17,9 +17,7 @@ class Settings(BaseSettings):
     recordings_dir: Path = BASE_DIR / "recordings"
     exports_dir: Path = BASE_DIR / "exports"
     segment_duration_seconds: int = 30
-    index_interval_seconds: int = 60
-    index_scan_days: int = 3
-    prune_batch_size: int = 2000
+    recording_maintenance_interval_seconds: int = 60
     retention_interval_seconds: int = 300
     default_retention_days: int = 2
     disk_pressure_enabled: bool = True
@@ -27,7 +25,7 @@ class Settings(BaseSettings):
     disk_target_free_gb: float = 10.0
     disk_pressure_batch_size: int = 100
     secret_key: str = "dev-secret-change-me"
-    # Must match container TZ so FFmpeg segment filenames match the indexer.
+    # Must match container TZ so FFmpeg segment filenames match the UI.
     app_timezone: str = "UTC"
 
     @computed_field

@@ -167,7 +167,7 @@
     if (!hit) return;
     const { seg, offsetSec } = hit;
 
-    if (!activeSegment || activeSegment.id !== seg.id) {
+    if (!activeSegment || activeSegment.path !== seg.path) {
       activeSegment = seg;
       video.src = seg.url;
       const onMeta = () => {
