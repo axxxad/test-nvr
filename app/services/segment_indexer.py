@@ -1,8 +1,10 @@
 import logging
 import re
+import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -10,6 +12,8 @@ from app.models.segment import Segment
 from app.timezone_util import parse_filename_timestamp
 
 logger = logging.getLogger(__name__)
+
+_index_lock = threading.Lock()
 
 _SEGMENT_PATH = re.compile(
     r"^cam(?P<camera_id>\d+)/(?P<year>\d{4})/(?P<month>\d{2})/(?P<day>\d{2})/"
@@ -53,8 +57,8 @@ def refresh_segment_times_from_paths(db: Session) -> int:
     return updated
 
 
-def index_recordings(db: Session) -> int:
-    """Scan recordings dir and upsert segment rows. Returns count of new segments."""
+def _index_recordings_unlocked(db: Session) -> int:
+    """Scan recordings dir and insert segment rows (caller holds _index_lock)."""
     recordings_dir = settings.recordings_dir
     if not recordings_dir.exists():
         return 0
@@ -95,15 +99,27 @@ def index_recordings(db: Session) -> int:
             size_bytes=size_bytes,
         )
         db.add(segment)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            existing_paths.add(relative)
+            continue
+
         existing_paths.add(relative)
         added += 1
 
     if added:
-        db.commit()
         logger.info("Indexed %s new segment(s)", added)
 
     refresh_segment_times_from_paths(db)
     return added
+
+
+def index_recordings(db: Session) -> int:
+    """Scan recordings dir and upsert segment rows. Returns count of new segments."""
+    with _index_lock:
+        return _index_recordings_unlocked(db)
 
 
 def prune_missing_files(db: Session) -> int:

@@ -7,10 +7,31 @@ Self-hosted lightweight NVR for Hikvision RTSP cameras.
 ## Quick start (Docker)
 
 ```bash
-docker compose up --build
+docker compose up --build -d
 ```
 
-Open [http://localhost:8000/cameras](http://localhost:8000/cameras). Each camera opens a tabbed view: **Live**, **Recordings**, **Details**.
+Open [http://127.0.0.1:8000/cameras](http://127.0.0.1:8000/cameras) (use **http**, not https). Each camera opens a tabbed view: **Recordings**, **Live**, **Details**.
+
+Check the container is running:
+
+```bash
+docker compose ps
+curl http://127.0.0.1:8000/health
+```
+
+Logs:
+
+```bash
+docker compose logs -f
+```
+
+### Browser shows `ERR_EMPTY_RESPONSE`
+
+Usually the container is **not running** (for example after Ctrl+C in the terminal where you ran `compose up` without `-d`).
+
+1. `docker compose ps` — `nvr` should be **Up**
+2. If **Exited**, start again: `docker compose up -d`
+3. Confirm: `curl http://127.0.0.1:8000/health` returns `{"status":"ok"}`
 
 - **SQLite:** `./data/nvr.db`
 - **Recordings:** `./recordings/cam{id}/YYYY/MM/DD/HH-MM-SS.mp4`

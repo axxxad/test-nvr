@@ -107,4 +107,45 @@
   grid.addEventListener("dragover", (event) => {
     event.preventDefault();
   });
+
+  function initPreviewStreams() {
+    const images = grid.querySelectorAll("img[data-preview-src]");
+    if (!images.length) return;
+
+    function loadPreview(img) {
+      const url = img.dataset.previewSrc;
+      if (!url || img.dataset.previewLoaded === "1") return;
+      img.dataset.previewLoaded = "1";
+      img.src = url;
+    }
+
+    function unloadPreview(img) {
+      if (img.dataset.previewLoaded !== "1") return;
+      img.removeAttribute("src");
+      img.dataset.previewLoaded = "0";
+    }
+
+    if (!("IntersectionObserver" in window)) {
+      images.forEach(loadPreview);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const img = entry.target;
+          if (entry.isIntersecting) {
+            loadPreview(img);
+          } else {
+            unloadPreview(img);
+          }
+        });
+      },
+      { rootMargin: "50px", threshold: 0.1 }
+    );
+
+    images.forEach((img) => observer.observe(img));
+  }
+
+  initPreviewStreams();
 })();

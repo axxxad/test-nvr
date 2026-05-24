@@ -64,6 +64,11 @@ app.include_router(cameras.router)
 app.include_router(recordings.router)
 
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
 @app.get("/")
 def root():
     return RedirectResponse(url="/cameras", status_code=303)
