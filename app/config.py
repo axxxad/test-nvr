@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     exports_dir: Path = BASE_DIR / "exports"
     segment_duration_seconds: int = 30
     index_interval_seconds: int = 60
+    index_scan_days: int = 3
+    prune_batch_size: int = 2000
     retention_interval_seconds: int = 300
     default_retention_days: int = 2
     disk_pressure_enabled: bool = True

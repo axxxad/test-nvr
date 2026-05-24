@@ -14,7 +14,6 @@ from app.services.disk_service import (
     recordings_disk_usage,
 )
 from app.services.recording_service import is_recording
-from app.services.segment_indexer import index_recordings
 from app.services.segment_service import get_latest_segment_end, list_segments_for_range
 from app.timezone_util import (
     format_form_local,
@@ -132,8 +131,6 @@ def build_recordings_tab_context(
     db: Session,
     camera_id: int,
 ) -> dict:
-    index_recordings(db)
-
     recording_active = is_recording(camera_id)
     default_from, default_to, to_hint = _default_range_for_camera(
         db, camera_id, recording_active=recording_active

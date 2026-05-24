@@ -43,7 +43,7 @@ Usually the container is **not running** (for example after Ctrl+C in the termin
 |---------|-------------|
 | Camera CRUD | Name + RTSP URL |
 | Recording | Per-camera FFmpeg segment recording (30s, copy codec) |
-| Indexer | Background scan → SQLite `segments` table (every 60s) |
+| Indexer | Background scan → SQLite `segments` table (every 60s, recent days only) |
 | Retention | Per-camera days; auto-delete old files (every 5 min); enforced immediately when you lower retention |
 | Disk pressure | When free space is low, delete oldest segments until target free space (see env) |
 | Browse | Date/time range → list segments |
@@ -100,10 +100,12 @@ ffmpeg -f concat -safe 0 -i list.txt -c copy output.mp4
 | `DISK_PRESSURE_ENABLED` | `true` | `true` |
 | `DISK_MIN_FREE_GB` | `5` | `5` — start deleting oldest segments below this free space |
 | `DISK_TARGET_FREE_GB` | `10` | `10` — stop disk-pressure purge once this much is free |
+| `INDEX_SCAN_DAYS` | `3` | Days of segment folders to scan each index cycle |
+| `PRUNE_BATCH_SIZE` | `2000` | Orphan DB rows checked per retention cycle (batched) |
 
 Set `TZ` and `APP_TIMEZONE` to your camera/PC timezone (IANA name). If they differ from Docker’s default UTC, segment folders and the UI were off by 1–2 hours (worse after daylight saving).
 
-Copy `.env.example` to `.env` and adjust the zone. After changing it, redeploy and open Recordings once (segment times are refreshed from filenames).
+Copy `.env.example` to `.env` and adjust the zone. After changing `APP_TIMEZONE`, call `refresh_segment_times_from_paths` once (or re-index) so segment times match filenames.
 
 ## Roadmap
 

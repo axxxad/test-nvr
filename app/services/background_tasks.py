@@ -15,7 +15,6 @@ def run_index_cycle() -> None:
     try:
         maintain_enabled_recordings(db)
         index_recordings(db)
-        prune_missing_files(db)
     except Exception:
         logger.exception("Index cycle failed")
     finally:
@@ -27,6 +26,7 @@ def run_retention_cycle() -> None:
     try:
         apply_retention_policy(db)
         index_recordings(db)
+        prune_missing_files(db)
     except Exception:
         logger.exception("Retention cycle failed")
     finally:
