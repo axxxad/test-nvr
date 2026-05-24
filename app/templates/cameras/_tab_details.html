@@ -1,29 +1,5 @@
-{% extends "base.html" %}
-
-{% block title %}{{ camera.name }} — CCTV NVR{% endblock %}
-
-{% block content %}
-<div class="mb-4">
-  <a href="/cameras" class="btn btn-ghost btn-sm">← Cameras</a>
-</div>
-{% if flash %}
-<div role="alert" class="alert alert-success mb-4"><span>{{ flash }}</span></div>
-{% endif %}
-
-<div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-  <h1 class="text-2xl font-bold">{{ camera.name }}</h1>
-  <div class="flex flex-wrap gap-2">
-    {% if recording_active %}
-    <span class="badge badge-success gap-2">
-      <span class="inline-block w-2 h-2 rounded-full bg-success-content animate-pulse"></span>
-      Recording
-    </span>
-    {% elif recording_enabled %}
-    <span class="badge badge-warning">Enabled (not running)</span>
-    {% else %}
-    <span class="badge badge-ghost">Recording off</span>
-    {% endif %}
-  </div>
+<div class="flex justify-end mb-4">
+  <a href="/cameras/{{ camera.id }}/edit" class="btn btn-primary btn-sm">Edit camera</a>
 </div>
 
 <div class="grid gap-4 lg:grid-cols-2">
@@ -71,13 +47,9 @@
       <p class="text-sm"><span class="text-base-content/60">Added:</span> {{ camera.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
 
       <div class="divider my-2"></div>
-      <div class="flex flex-wrap gap-2">
-        <a href="/cameras/{{ camera.id }}/live" class="btn btn-secondary btn-sm">Live preview</a>
-        <a href="/cameras/{{ camera.id }}/recordings" class="btn btn-primary btn-sm">Browse recordings</a>
-        <a href="/cameras/{{ camera.id }}/edit" class="btn btn-outline btn-sm">Edit</a>
-      </div>
+      <p class="text-sm text-base-content/60 mb-3">Change retention on the Recordings tab.</p>
 
-      <div class="flex flex-wrap gap-2 mt-4">
+      <div class="flex flex-wrap gap-2">
         {% if recording_enabled %}
         <form method="post" action="/cameras/{{ camera.id }}/recording/disable">
           <button type="submit" class="btn btn-outline btn-sm">Stop recording</button>
@@ -89,10 +61,9 @@
         {% endif %}
         <form method="post" action="/cameras/{{ camera.id }}/delete"
               onsubmit="return confirm('Delete {{ camera.name }}?');">
-          <button type="submit" class="btn btn-ghost btn-sm text-error">Delete</button>
+          <button type="submit" class="btn btn-ghost btn-sm text-error">Delete camera</button>
         </form>
       </div>
     </div>
   </div>
 </div>
-{% endblock %}

@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.camera import Camera
@@ -7,7 +8,33 @@ from app.services.recording_service import stop_before_delete
 
 
 def list_cameras(db: Session) -> list[Camera]:
-    return db.query(Camera).order_by(Camera.name).all()
+    return (
+        db.query(Camera)
+        .order_by(Camera.sort_order.asc(), Camera.id.asc())
+        .all()
+    )
+
+
+def _next_sort_order(db: Session) -> int:
+    current_max = db.query(func.max(Camera.sort_order)).scalar()
+    return (current_max or 0) + 1
+
+
+def reorder_cameras(db: Session, camera_ids: list[int]) -> None:
+    if not camera_ids:
+        return
+    known_ids = {
+        row[0]
+        for row in db.query(Camera.id).filter(Camera.id.in_(camera_ids)).all()
+    }
+    for index, camera_id in enumerate(camera_ids):
+        if camera_id not in known_ids:
+            continue
+        db.query(Camera).filter(Camera.id == camera_id).update(
+            {"sort_order": index},
+            synchronize_session=False,
+        )
+    db.commit()
 
 
 def get_camera(db: Session, camera_id: int) -> Camera | None:
@@ -64,6 +91,7 @@ def create_camera(db: Session, data: CameraForm) -> Camera:
         rtsp_url=_rtsp_url_from_form(data),
         retention_days=data.retention_days,
         record_audio=data.record_audio,
+        sort_order=_next_sort_order(db),
     )
     db.add(camera)
     db.commit()
@@ -72,12 +100,17 @@ def create_camera(db: Session, data: CameraForm) -> Camera:
 
 
 def update_camera(db: Session, camera: Camera, data: CameraForm) -> Camera:
+    retention_changed = camera.retention_days != data.retention_days
     camera.name = data.name
     camera.rtsp_url = _rtsp_url_from_form(data)
     camera.retention_days = data.retention_days
     camera.record_audio = data.record_audio
     db.commit()
     db.refresh(camera)
+    if retention_changed:
+        from app.services.retention_service import apply_retention_policy
+
+        apply_retention_policy(db, camera_id=camera.id)
     return camera
 
 

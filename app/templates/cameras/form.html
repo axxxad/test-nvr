@@ -80,7 +80,7 @@
       </div>
 
       <div class="card-actions justify-end mt-6">
-        <a href="/cameras" class="btn btn-ghost">Cancel</a>
+        <a href="{{ cancel_url|default('/cameras') }}" class="btn btn-ghost">Cancel</a>
         <button type="submit" class="btn btn-primary">{{ submit_label }}</button>
       </div>
     </form>

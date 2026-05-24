@@ -1,30 +1,12 @@
-{% extends "base.html" %}
-
-{% block title %}{{ camera.name }} — Recordings{% endblock %}
-{% block main_class %}max-w-6xl{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="/static/css/timeline.css?v=4">
-{% endblock %}
-
-{% block content %}
-<div class="mb-4">
-  <a href="/cameras" class="btn btn-ghost btn-sm">← Cameras</a>
-</div>
-
-<div class="flex flex-wrap items-center justify-between gap-4 mb-4">
-  <h1 class="text-2xl font-bold">{{ camera.name }}</h1>
-  {% if recording_active %}
-  <span class="badge badge-success gap-2">
-    <span class="inline-block w-2 h-2 rounded-full bg-success-content animate-pulse"></span>
-    Recording
-  </span>
-  {% endif %}
-</div>
-
-{% if error %}
+{% if recordings_error %}
 <div role="alert" class="alert alert-error mb-4">
-  <span>{{ error }}</span>
+  <span>{{ recordings_error }}</span>
+</div>
+{% endif %}
+
+{% if disk_pressure_active %}
+<div role="alert" class="alert alert-warning mb-4">
+  <span>Disk space is low ({{ disk_free_gib }} free of {{ disk_total_gib }}). Oldest recordings are being removed automatically.</span>
 </div>
 {% endif %}
 
@@ -44,8 +26,9 @@
          class="btn btn-sm {% if active_preset == 'last24h' %}btn-primary{% else %}btn-outline{% endif %}">Last 24h</a>
     </div>
 
-    <form method="get" action="/cameras/{{ camera.id }}/recordings"
+    <form method="get" action="/cameras/{{ camera.id }}"
           class="grid gap-3 sm:grid-cols-[1fr_1fr_auto] items-end">
+      <input type="hidden" name="tab" value="recordings" />
       <div class="form-control">
         <label class="label py-0" for="range-from">
           <span class="label-text font-medium">From</span>
@@ -193,7 +176,7 @@
 <div class="card bg-base-100 shadow">
   <div class="card-body items-center text-center py-12">
     <p class="text-base-content/70">No segments in this range.</p>
-    <p class="text-sm text-base-content/50 mt-2">Pick a date range and click <strong>Load recordings</strong>.</p>
+    <p class="text-sm text-base-content/50 mt-2">Pick a date range and click <strong>Load</strong>.</p>
   </div>
 </div>
 {% endif %}
@@ -206,13 +189,7 @@
         <input type="number" id="retention_days" name="retention_days" value="{{ camera.retention_days }}" min="1" max="365" class="input input-bordered input-sm w-24" />
       </div>
       <button type="submit" class="btn btn-outline btn-sm">Save</button>
+      <p class="text-xs text-base-content/60 w-full mt-1">Lowering retention deletes older footage immediately. Disk: {{ disk_free_gib }} free.</p>
     </form>
   </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-{% if segments %}
-<script src="/static/js/timeline-player.js?v=5"></script>
-{% endif %}
-{% endblock %}

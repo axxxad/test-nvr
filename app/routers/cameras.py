@@ -1,15 +1,15 @@
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from starlette import status
 
 from app.database import get_db
-from app.rtsp import mask_rtsp_url, parse_rtsp_url
 from app.schemas.camera import CameraForm
+from app.services.camera_show import build_camera_show_context, parse_active_tab
 from app.services import camera_service
 from app.services.live_preview import mjpeg_stream
 from app.services.recording_service import (
@@ -73,7 +73,9 @@ def _recording_redirect(camera_id: int, next_url: str | None, flash_message: str
     if next_url == "/cameras":
         url = f"/cameras?flash={flash_message.replace(' ', '+')}"
     else:
-        url = f"/cameras/{camera_id}?flash={flash_message.replace(' ', '+')}"
+        url = (
+            f"/cameras/{camera_id}?tab=details&flash={flash_message.replace(' ', '+')}"
+        )
     return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -159,36 +161,41 @@ def create_camera(
     )
 
 
+@router.post("/reorder")
+async def reorder_cameras(request: Request, db: Session = Depends(get_db)):
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False, "error": "Invalid JSON"}, status_code=400)
+
+    raw_order = body.get("order")
+    if not isinstance(raw_order, list):
+        return JSONResponse({"ok": False, "error": "order must be a list"}, status_code=400)
+
+    camera_ids: list[int] = []
+    for value in raw_order:
+        try:
+            camera_ids.append(int(value))
+        except (TypeError, ValueError):
+            return JSONResponse(
+                {"ok": False, "error": "order must contain camera ids"},
+                status_code=400,
+            )
+
+    camera_service.reorder_cameras(db, camera_ids)
+    return JSONResponse({"ok": True})
+
+
 @router.get("/{camera_id}", response_class=HTMLResponse)
 def camera_detail(request: Request, camera_id: int, db: Session = Depends(get_db)):
-    camera = camera_service.get_camera(db, camera_id)
-    if camera is None:
+    active_tab = parse_active_tab(request.query_params.get("tab"))
+    ctx = build_camera_show_context(
+        request, db, camera_id, active_tab=active_tab
+    )
+    if ctx is None:
         return RedirectResponse(url="/cameras", status_code=status.HTTP_303_SEE_OTHER)
 
-    flash = request.query_params.get("flash")
-    try:
-        parts = parse_rtsp_url(camera.rtsp_url)
-        connection = {
-            "host": parts["host"],
-            "port": parts["port"],
-            "username": parts["username"],
-            "path": parts["path"],
-        }
-    except ValueError:
-        connection = None
-
-    return templates.TemplateResponse(
-        request,
-        "cameras/detail.html",
-        {
-            "camera": camera,
-            "flash": flash,
-            "masked_url": mask_rtsp_url(camera.rtsp_url),
-            "connection": connection,
-            "recording_enabled": camera.recording_enabled,
-            "recording_active": is_recording(camera_id),
-        },
-    )
+    return templates.TemplateResponse(request, "cameras/show.html", ctx)
 
 
 @router.get("/{camera_id}/edit", response_class=HTMLResponse)
@@ -204,6 +211,7 @@ def edit_camera_form(request: Request, camera_id: int, db: Session = Depends(get
             "title": "Edit camera",
             "submit_label": "Save changes",
             "action_url": f"/cameras/{camera_id}/edit",
+            "cancel_url": f"/cameras/{camera_id}?tab=details",
             **_form_context({}, camera_service.form_defaults(camera)),
         },
     )
@@ -269,21 +277,31 @@ def update_camera(
             enable_recording(db, camera)
 
     return RedirectResponse(
-        url=f"/cameras/{camera_id}?flash=Camera+updated",
+        url=f"/cameras/{camera_id}?tab=details&flash=Camera+updated",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
 @router.get("/{camera_id}/live", response_class=HTMLResponse)
-def live_preview_page(request: Request, camera_id: int, db: Session = Depends(get_db)):
+def live_preview_page(camera_id: int, db: Session = Depends(get_db)):
+    if camera_service.get_camera(db, camera_id) is None:
+        return RedirectResponse(url="/cameras", status_code=status.HTTP_303_SEE_OTHER)
+
+    return RedirectResponse(
+        url=f"/cameras/{camera_id}?tab=live",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.get("/{camera_id}/preview/stream")
+def grid_preview_stream(camera_id: int, db: Session = Depends(get_db)):
     camera = camera_service.get_camera(db, camera_id)
     if camera is None:
         return RedirectResponse(url="/cameras", status_code=status.HTTP_303_SEE_OTHER)
 
-    return templates.TemplateResponse(
-        request,
-        "cameras/live.html",
-        {"camera": camera},
+    return StreamingResponse(
+        mjpeg_stream(camera.rtsp_url, substream=True, max_height=360, fps=4),
+        media_type="multipart/x-mixed-replace; boundary=frame",
     )
 
 
@@ -294,7 +312,7 @@ def live_preview_stream(camera_id: int, db: Session = Depends(get_db)):
         return RedirectResponse(url="/cameras", status_code=status.HTTP_303_SEE_OTHER)
 
     return StreamingResponse(
-        mjpeg_stream(camera.rtsp_url),
+        mjpeg_stream(camera.rtsp_url, substream=False),
         media_type="multipart/x-mixed-replace; boundary=frame",
     )
 

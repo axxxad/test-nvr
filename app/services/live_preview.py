@@ -2,7 +2,7 @@ import logging
 import subprocess
 from collections.abc import Generator
 
-from app.rtsp import rtsp_url_for_ffmpeg
+from app.rtsp import rtsp_substream_url_for_ffmpeg, rtsp_url_for_ffmpeg
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +31,18 @@ def _iter_jpeg_frames(stream) -> Generator[bytes, None, None]:
             buffer = buffer[end + 2 :]
 
 
-def mjpeg_stream(stored_rtsp_url: str) -> Generator[bytes, None, None]:
+def mjpeg_stream(
+    stored_rtsp_url: str,
+    *,
+    substream: bool = False,
+    max_height: int = 720,
+    fps: int = 8,
+) -> Generator[bytes, None, None]:
     """Yield multipart MJPEG chunks for browser <img src=...>."""
-    rtsp_url = rtsp_url_for_ffmpeg(stored_rtsp_url)
+    if substream:
+        rtsp_url = rtsp_substream_url_for_ffmpeg(stored_rtsp_url)
+    else:
+        rtsp_url = rtsp_url_for_ffmpeg(stored_rtsp_url)
     cmd = [
         "ffmpeg",
         "-hide_banner",
@@ -45,7 +54,7 @@ def mjpeg_stream(stored_rtsp_url: str) -> Generator[bytes, None, None]:
         rtsp_url,
         "-an",
         "-vf",
-        "fps=8,scale=-2:720",
+        f"fps={fps},scale=-2:{max_height}",
         "-c:v",
         "mjpeg",
         "-q:v",

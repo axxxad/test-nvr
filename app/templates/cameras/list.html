@@ -1,70 +1,96 @@
 {% extends "base.html" %}
 
 {% block title %}Cameras — CCTV NVR{% endblock %}
+{% block main_class %}max-w-7xl{% endblock %}
+
+{% block extra_css %}
+<style>
+  .camera-grid-card.camera-grid-dragging { opacity: 0.45; }
+  .camera-grid-card.camera-grid-drop-target {
+    outline: 2px solid color-mix(in oklab, var(--color-primary) 70%, transparent);
+    outline-offset: 2px;
+  }
+</style>
+{% endblock %}
 
 {% block navbar_actions %}
 <a href="/cameras/new" class="btn btn-primary">Add camera</a>
 {% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-between mb-6">
-  <h1 class="text-2xl font-bold">Cameras</h1>
+<div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-2xl font-bold">Cameras</h1>
+    {% if cameras %}
+    <p class="text-sm text-base-content/60 mt-1">Drag cards to reorder. Previews use substream (102); recording uses main (101).</p>
+    {% endif %}
+  </div>
 </div>
 
 {% if cameras %}
-<div class="card bg-base-100 shadow">
-  <div class="card-body p-0">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Recording</th>
-          <th class="text-right">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for camera in cameras %}
-        {% set rec = recording[camera.id] %}
-        <tr class="hover">
-          <td>
-            <a href="/cameras/{{ camera.id }}" class="font-medium link link-hover">{{ camera.name }}</a>
-          </td>
-          <td>
-            {% if rec.active %}
-            <span class="badge badge-success gap-2">
-              <span class="inline-block w-2 h-2 rounded-full bg-success-content animate-pulse"></span>
-              Recording
-            </span>
-            {% elif rec.enabled %}
-            <span class="badge badge-warning">Enabled (not running)</span>
-            {% else %}
-            <span class="badge badge-ghost">Off</span>
-            {% endif %}
-          </td>
-          <td class="text-right">
-            <div class="flex justify-end gap-1 flex-wrap">
-              <a href="/cameras/{{ camera.id }}" class="btn btn-ghost btn-sm">View</a>
-              <a href="/cameras/{{ camera.id }}/live" class="btn btn-ghost btn-sm">Live</a>
-              <a href="/cameras/{{ camera.id }}/recordings" class="btn btn-ghost btn-sm">Browse</a>
-              {% if rec.enabled %}
-              <form method="post" action="/cameras/{{ camera.id }}/recording/disable" class="inline">
-                <input type="hidden" name="next" value="/cameras" />
-                <button type="submit" class="btn btn-outline btn-sm">Stop</button>
-              </form>
-              {% else %}
-              <form method="post" action="/cameras/{{ camera.id }}/recording/enable" class="inline">
-                <input type="hidden" name="next" value="/cameras" />
-                <button type="submit" class="btn btn-primary btn-sm">Record</button>
-              </form>
-              {% endif %}
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+<div
+  id="camera-grid"
+  class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3"
+  data-reorder-url="/cameras/reorder"
+>
+  {% for camera in cameras %}
+  {% set rec = recording[camera.id] %}
+  <article
+    class="camera-grid-card card card-compact bg-base-100 shadow-sm hover:shadow transition-shadow"
+    data-camera-id="{{ camera.id }}"
+  >
+    <div class="camera-grid-preview aspect-video bg-neutral rounded-t-lg relative overflow-hidden">
+      <img
+        src="/cameras/{{ camera.id }}/preview/stream"
+        alt=""
+        class="absolute inset-0 w-full h-full object-cover bg-neutral"
+        loading="lazy"
+      />
+      <span
+        class="camera-grid-drag-handle absolute top-1 left-1 btn btn-xs btn-ghost btn-square min-h-0 h-6 w-6 bg-base-100/80 border-0 cursor-grab active:cursor-grabbing text-xs"
+        draggable="true"
+        title="Drag to reorder"
+        aria-label="Drag to reorder {{ camera.name }}"
+      >⠿</span>
+      {% if rec.active %}
+      <span class="absolute top-1 right-1 badge badge-success badge-xs gap-0.5 px-1.5">
+        <span class="inline-block w-1 h-1 rounded-full bg-success-content animate-pulse"></span>
+        REC
+      </span>
+      {% elif rec.enabled %}
+      <span class="absolute top-1 right-1 badge badge-warning badge-xs px-1.5">Idle</span>
+      {% endif %}
+    </div>
+
+    <div class="card-body p-2 gap-1.5">
+      <h2 class="text-sm font-semibold leading-snug truncate" title="{{ camera.name }}">
+        <a href="/cameras/{{ camera.id }}?tab=recordings" class="link link-hover">{{ camera.name }}</a>
+      </h2>
+
+      <div class="grid grid-cols-3 gap-0.5">
+        <a href="/cameras/{{ camera.id }}?tab=recordings" class="btn btn-primary btn-xs px-1">Recordings</a>
+        <a href="/cameras/{{ camera.id }}?tab=live" class="btn btn-outline btn-xs px-1">Live</a>
+        <a href="/cameras/{{ camera.id }}?tab=details" class="btn btn-ghost btn-xs px-1">Info</a>
+      </div>
+
+      <div class="pt-0.5">
+        {% if rec.enabled %}
+        <form method="post" action="/cameras/{{ camera.id }}/recording/disable">
+          <input type="hidden" name="next" value="/cameras" />
+          <button type="submit" class="btn btn-outline btn-xs w-full min-h-7 h-7">Stop</button>
+        </form>
+        {% else %}
+        <form method="post" action="/cameras/{{ camera.id }}/recording/enable">
+          <input type="hidden" name="next" value="/cameras" />
+          <button type="submit" class="btn btn-primary btn-xs w-full min-h-7 h-7">Record</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </article>
+  {% endfor %}
 </div>
+<p id="camera-grid-status" class="text-xs text-base-content/50 mt-3 min-h-[1.25rem]" aria-live="polite"></p>
 {% else %}
 <div class="card bg-base-100 shadow">
   <div class="card-body items-center text-center py-12">
@@ -75,5 +101,11 @@
     </div>
   </div>
 </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if cameras %}
+<script src="/static/js/camera-grid.js?v=1"></script>
 {% endif %}
 {% endblock %}

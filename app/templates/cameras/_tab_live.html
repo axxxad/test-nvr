@@ -1,0 +1,21 @@
+<div class="card bg-base-100 shadow">
+  <div class="card-body">
+    <div class="aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center">
+      <img
+        id="live-stream"
+        src="/cameras/{{ camera.id }}/live/stream"
+        alt="Live stream {{ camera.name }}"
+        class="max-w-full max-h-[70vh] object-contain"
+      />
+    </div>
+    <p class="text-sm text-base-content/60 mt-4">
+      Low-latency MJPEG preview (~8 fps). If the image freezes, use Reconnect or check RTSP settings on the Details tab.
+    </p>
+    <div class="card-actions mt-2">
+      <button type="button" class="btn btn-outline btn-sm"
+              onclick="document.getElementById('live-stream').src='/cameras/{{ camera.id }}/live/stream?t='+Date.now()">
+        Reconnect
+      </button>
+    </div>
+  </div>
+</div>

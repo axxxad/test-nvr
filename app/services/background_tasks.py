@@ -4,7 +4,7 @@ import logging
 from app.config import settings
 from app.database import SessionLocal
 from app.services.recording_service import maintain_enabled_recordings
-from app.services.retention_service import run_retention_cleanup
+from app.services.retention_service import apply_retention_policy
 from app.services.segment_indexer import index_recordings, prune_missing_files
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ def run_index_cycle() -> None:
 def run_retention_cycle() -> None:
     db = SessionLocal()
     try:
-        run_retention_cleanup(db)
+        apply_retention_policy(db)
         index_recordings(db)
     except Exception:
         logger.exception("Retention cycle failed")

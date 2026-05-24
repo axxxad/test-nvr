@@ -20,6 +20,7 @@ class Camera(Base):
     recording_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     record_audio: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     retention_days: Mapped[int] = mapped_column(Integer, default=2, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utc_now,

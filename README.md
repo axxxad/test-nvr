@@ -10,7 +10,7 @@ Self-hosted lightweight NVR for Hikvision RTSP cameras.
 docker compose up --build
 ```
 
-Open [http://localhost:8000/cameras](http://localhost:8000/cameras).
+Open [http://localhost:8000/cameras](http://localhost:8000/cameras). Each camera opens a tabbed view: **Live**, **Recordings**, **Details**.
 
 - **SQLite:** `./data/nvr.db`
 - **Recordings:** `./recordings/cam{id}/YYYY/MM/DD/HH-MM-SS.mp4`
@@ -23,7 +23,8 @@ Open [http://localhost:8000/cameras](http://localhost:8000/cameras).
 | Camera CRUD | Name + RTSP URL |
 | Recording | Per-camera FFmpeg segment recording (30s, copy codec) |
 | Indexer | Background scan → SQLite `segments` table (every 60s) |
-| Retention | Per-camera days; auto-delete old files (every 5 min) |
+| Retention | Per-camera days; auto-delete old files (every 5 min); enforced immediately when you lower retention |
+| Disk pressure | When free space is low, delete oldest segments until target free space (see env) |
 | Browse | Date/time range → list segments |
 | Export | FFmpeg concat → single MP4 download |
 
@@ -46,8 +47,8 @@ rtsp://USER:PASS@192.168.1.100:554/Streaming/Channels/101
 
 | Stream | Channel |
 |--------|---------|
-| Main   | `101`   |
-| Sub    | `102`   |
+| Main (recording, Live tab) | `101`   |
+| Sub (camera grid preview)    | `102`   |
 
 ## Recording command
 
@@ -75,6 +76,9 @@ ffmpeg -f concat -safe 0 -i list.txt -c copy output.mp4
 | `RECORDINGS_DIR` | `./recordings` | `/recordings` |
 | `APP_TIMEZONE` | `UTC` | `Europe/London` |
 | `TZ` | — | **same as** `APP_TIMEZONE` (FFmpeg segment folders) |
+| `DISK_PRESSURE_ENABLED` | `true` | `true` |
+| `DISK_MIN_FREE_GB` | `5` | `5` — start deleting oldest segments below this free space |
+| `DISK_TARGET_FREE_GB` | `10` | `10` — stop disk-pressure purge once this much is free |
 
 Set `TZ` and `APP_TIMEZONE` to your camera/PC timezone (IANA name). If they differ from Docker’s default UTC, segment folders and the UI were off by 1–2 hours (worse after daylight saving).
 
